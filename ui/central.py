@@ -19,11 +19,20 @@ class LineNumberArea(QWidget):
 class CodeEditor(QPlainTextEdit):
     def __init__(self):
         super().__init__()
+
+        self.setAcceptDrops(False)
+
         self.line_number_area = LineNumberArea(self)
         self.blockCountChanged.connect(self.update_line_number_area_width)
         self.updateRequest.connect(self.update_line_number_area)
         self.cursorPositionChanged.connect(self.update)
         self.update_line_number_area_width(0)
+
+    def dragEnterEvent(self, event):
+        event.ignore()
+
+    def dropEvent(self, event):
+        event.ignore()
 
     def line_number_area_width(self):
         digits = len(str(max(1, self.blockCount())))
@@ -73,6 +82,8 @@ class CentralWidget(QWidget):
         self.tabs = []
         self.current_index = -1
         self.untitled_counter = 1
+
+        self.setAcceptDrops(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -140,6 +151,39 @@ class CentralWidget(QWidget):
         layout.addWidget(self.output, 1)
 
         self.add_tab()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        if not urls:
+            return
+        path = urls[0].toLocalFile()
+        if not path:
+            return
+        self.open_file_from_path(path)
+
+    def open_file_from_path(self, path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+        except Exception:
+            return
+
+        self.add_tab()
+
+        filename = path.split("/")[-1]
+        tab = self.tabs[self.current_index]
+        tab["title"] = filename
+        tab["button"].setText(f"{filename}   ✕")
+        tab["text"] = text
+        tab["modified"] = False
+
+        self.editor.blockSignals(True)
+        self.editor.setPlainText(text)
+        self.editor.blockSignals(False)
 
     def _sync_editor(self):
         if 0 <= self.current_index < len(self.tabs):
@@ -211,9 +255,6 @@ class CentralWidget(QWidget):
             return
 
         w = self.window()
-        if not hasattr(w, "labels"):
-            self.close_tab(index)
-            return
 
         msg = QMessageBox(self)
         msg.setWindowTitle(w.labels["save_title"])
@@ -227,7 +268,7 @@ class CentralWidget(QWidget):
 
         if clicked is cancel_btn:
             return
-        if clicked is yes_btn and hasattr(w, "actions"):
+        if clicked is yes_btn:
             w.actions.save.trigger()
 
         self.close_tab(index)
