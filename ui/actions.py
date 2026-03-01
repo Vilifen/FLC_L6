@@ -97,32 +97,29 @@ class ActionManager:
         self.menu_about.setText(L["about"])
 
     def _connect(self):
-        editor = self.win.get_editor()
-        output = self.win.get_output()
-
-        self.menu_new.triggered.connect(lambda: self.ctrl.file_new(editor))
+        self.menu_new.triggered.connect(lambda: self.ctrl.file_new(self.win))
         self.menu_open.triggered.connect(lambda: self.ctrl.file_open(self.win))
         self.menu_save.triggered.connect(lambda: self.ctrl.file_save(self.win))
         self.menu_save_as.triggered.connect(lambda: self.ctrl.file_save_as(self.win))
         self.menu_exit.triggered.connect(self.win.close)
 
-        self.new.triggered.connect(lambda: self.ctrl.file_new(editor))
+        self.new.triggered.connect(lambda: self.ctrl.file_new(self.win))
         self.open.triggered.connect(lambda: self.ctrl.file_open(self.win))
         self.save.triggered.connect(lambda: self.ctrl.file_save(self.win))
 
-        self.undo.triggered.connect(editor.undo)
-        self.redo.triggered.connect(editor.redo)
-        self.copy.triggered.connect(editor.copy)
-        self.cut.triggered.connect(editor.cut)
-        self.paste.triggered.connect(editor.paste)
+        self.undo.triggered.connect(lambda: self.win.get_editor().undo())
+        self.redo.triggered.connect(lambda: self.win.get_editor().redo())
+        self.copy.triggered.connect(lambda: self.win.get_editor().copy())
+        self.cut.triggered.connect(lambda: self.win.get_editor().cut())
+        self.paste.triggered.connect(lambda: self.win.get_editor().paste())
 
-        self.menu_undo.triggered.connect(editor.undo)
-        self.menu_redo.triggered.connect(editor.redo)
-        self.menu_cut.triggered.connect(editor.cut)
-        self.menu_copy.triggered.connect(editor.copy)
-        self.menu_paste.triggered.connect(editor.paste)
-        self.menu_delete.triggered.connect(lambda: editor.textCursor().removeSelectedText())
-        self.menu_select_all.triggered.connect(editor.selectAll)
+        self.menu_undo.triggered.connect(lambda: self.win.get_editor().undo())
+        self.menu_redo.triggered.connect(lambda: self.win.get_editor().redo())
+        self.menu_cut.triggered.connect(lambda: self.win.get_editor().cut())
+        self.menu_copy.triggered.connect(lambda: self.win.get_editor().copy())
+        self.menu_paste.triggered.connect(lambda: self.win.get_editor().paste())
+        self.menu_delete.triggered.connect(lambda: self.win.get_editor().textCursor().removeSelectedText())
+        self.menu_select_all.triggered.connect(lambda: self.win.get_editor().selectAll())
 
         self.menu_text_task.triggered.connect(lambda: self._info(self.win.labels["task"]))
         self.menu_text_grammar.triggered.connect(lambda: self._info(self.win.labels["grammar"]))
@@ -132,11 +129,11 @@ class ActionManager:
         self.menu_text_literature.triggered.connect(lambda: self._info(self.win.labels["literature"]))
         self.menu_text_source.triggered.connect(lambda: self._info(self.win.labels["source"]))
 
-        self.menu_run.triggered.connect(lambda: self.ctrl.run(self.win, editor, output))
-        self.run.triggered.connect(lambda: self.ctrl.run(self.win, editor, output))
+        self.menu_run.triggered.connect(lambda: self.ctrl.run(self.win))
+        self.run.triggered.connect(lambda: self.ctrl.run(self.win))
 
-        self.menu_help.triggered.connect(lambda: self.ctrl.help(self.win, output))
-        self.menu_about.triggered.connect(lambda: self.ctrl.about(self.win, output))
+        self.menu_help.triggered.connect(lambda: self.ctrl.help(self.win, self.win.get_output()))
+        self.menu_about.triggered.connect(lambda: self.ctrl.about(self.win, self.win.get_output()))
 
         self.lang_ru.triggered.connect(lambda: self.win.set_language("ru"))
         self.lang_en.triggered.connect(lambda: self.win.set_language("en"))
