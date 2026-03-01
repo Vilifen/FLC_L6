@@ -19,7 +19,7 @@ class Controller:
             editor = window.get_editor()
             with open(path, "r", encoding="utf-8") as f:
                 editor.setPlainText(f.read())
-            window.central.set_current_output_text("")
+            window.central.show_results_table([])
 
     def file_save(self, window):
         editor = window.get_editor()
@@ -41,8 +41,7 @@ class Controller:
 
     def run(self, window):
         editor = window.get_editor()
-        output = window.get_output()
-        if editor is None or output is None:
+        if editor is None:
             return
 
         text = editor.toPlainText()
@@ -53,20 +52,28 @@ class Controller:
         line_word = window.labels["line_word"]
         pos_word = window.labels["pos_word"]
 
+        errors = []
+
         for i, line in enumerate(lines, start=1):
             col = line.find(forbidden)
             if col != -1:
-                if error_label == "Error":
-                    msg = f'{error_label}: invalid word "{forbidden}" ({line_word} {i}, {pos_word} {col + 1})'
-                else:
-                    msg = f'{error_label}: недопустимое слово "{forbidden}" ({line_word} {i}, {pos_word} {col + 1})'
-                window.central.set_current_output_text(msg)
-                return
+                msg = (
+                    f'{error_label}: недопустимое слово "{forbidden}"'
+                    if error_label != "Error"
+                    else f'{error_label}: invalid word "{forbidden}"'
+                )
 
-        window.central.set_current_output_text(window.labels["no_errors"])
+                errors.append({
+                    "file": window.central.tabs[window.central.current_index]["title"],
+                    "line": i,
+                    "column": col + 1,
+                    "message": msg
+                })
+
+        window.central.show_results_table(errors)
 
     def help(self, window, output):
-        output.setPlainText(window.labels["help_text"])
+        window.central.show_results_table([])
 
     def about(self, window, output):
-        output.setPlainText(window.labels["about_text"])
+        window.central.show_results_table([])

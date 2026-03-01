@@ -23,7 +23,7 @@ class PythonHighlighter(QSyntaxHighlighter):
             "def", "class", "return", "if", "elif", "else", "while", "for",
             "try", "except", "finally", "with", "as", "import", "from",
             "pass", "break", "continue", "in", "is", "not", "and", "or",
-            "lambda", "yield", "global", "nonlocal", "assert", "raise", "print"
+            "lambda", "yield", "global", "nonlocal", "assert", "raise"
         ]
 
         keyword_format = fmt("#0077cc", True)
@@ -190,14 +190,17 @@ class CentralWidget(QWidget):
 
         self.apply_font_size()
 
-        self.editor.textChanged.connect(self._sync_editor)
-        self.editor.textChanged.connect(self._update_status)
-
         layout.addWidget(self.tab_scroll)
         layout.addWidget(self.editor, 3)
         layout.addWidget(self.output, 1)
 
+        self.editor.textChanged.connect(self._sync_editor)
+        self.editor.textChanged.connect(self._update_status)
+
         self.add_tab()
+
+        # таблица по умолчанию
+        self.show_results_table([])
 
     def apply_font_size(self):
         font = QFont()
@@ -342,7 +345,7 @@ class CentralWidget(QWidget):
         self.editor.blockSignals(True)
         self.editor.setPlainText(data["text"])
         self.editor.blockSignals(False)
-        self.output.setPlainText(data["output"])
+        self.output.setHtml(data["output"])
 
     def current_editor(self):
         return self.editor
@@ -353,6 +356,45 @@ class CentralWidget(QWidget):
     def set_current_output_text(self, text):
         self.output.setPlainText(text)
         self._sync_output()
+        self._update_status()
+
+    def show_results_table(self, results):
+        html = """
+        <table border="1" cellspacing="0" cellpadding="4"
+               style="border-collapse: collapse; font-size: 14px;">
+            <tr style="background:#e6e6e6; font-weight: bold;">
+                <td>№</td>
+                <td>File</td>
+                <td>Line</td>
+                <td>Column</td>
+                <td>Message</td>
+            </tr>
+        """
+
+        if not results:
+            html += """
+            <tr>
+                <td colspan="5" style="text-align:center; color:#666;">
+                    Нет данных
+                </td>
+            </tr>
+            """
+        else:
+            for i, r in enumerate(results, start=1):
+                html += f"""
+                <tr>
+                    <td>{i}</td>
+                    <td>{r['file']}</td>
+                    <td>{r['line']}</td>
+                    <td>{r['column']}</td>
+                    <td>{r['message']}</td>
+                </tr>
+                """
+
+        html += "</table>"
+
+        self.output.setHtml(html)
+        self.tabs[self.current_index]["output"] = html
         self._update_status()
 
     def rename_current_tab(self, title):
