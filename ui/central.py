@@ -112,7 +112,11 @@ class CentralWidget(QWidget):
         cursor.select(cursor.SelectionType.WordUnderCursor)
         word = cursor.selectedText()
 
-        if word == "Ошибка":
+        parent = self.parent()
+        if not parent:
+            return
+
+        if word == parent.labels["error_label"]:
             cursor.select(cursor.SelectionType.LineUnderCursor)
             line = cursor.selectedText()
-            self.parent().handle_output_click(line)
+            parent.handle_output_click(line)

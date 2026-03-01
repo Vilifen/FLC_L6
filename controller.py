@@ -30,17 +30,32 @@ class Controller:
     def file_save_as(self, window):
         self.file_save(window)
 
-
-    def run(self, editor, output):
+    def run(self, window, editor, output):
         text = editor.toPlainText()
         lines = text.split("\n")
 
+        forbidden = window.labels["forbidden_word"]
+        error_label = window.labels["error_label"]
+        line_word = window.labels["line_word"]
+        pos_word = window.labels["pos_word"]
+
         for i, line in enumerate(lines, start=1):
-            col = line.find("Ошибка")
+            col = line.find(forbidden)
             if col != -1:
-                output.setPlainText(
-                    f'Ошибка: недопустимое слово "Ошибка" (строка {i}, позиция {col + 1})'
-                )
+                if error_label == "Error":
+                    output.setPlainText(
+                        f'{error_label}: invalid word "{forbidden}" ({line_word} {i}, {pos_word} {col + 1})'
+                    )
+                else:
+                    output.setPlainText(
+                        f'{error_label}: недопустимое слово "{forbidden}" ({line_word} {i}, {pos_word} {col + 1})'
+                    )
                 return
 
-        output.setPlainText("Ошибок не найдено.")
+        output.setPlainText(window.labels["no_errors"])
+
+    def help(self, window, output):
+        output.setPlainText(window.labels["help_text"])
+
+    def about(self, window, output):
+        output.setPlainText(window.labels["about_text"])

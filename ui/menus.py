@@ -2,7 +2,7 @@ class MenuBuilder:
     def __init__(self, window, actions):
         menubar = window.menuBar()
 
-        file_menu = menubar.addMenu("Файл")
+        file_menu = menubar.addMenu(window.labels["file"])
         file_menu.addAction(actions.menu_new)
         file_menu.addAction(actions.menu_open)
         file_menu.addAction(actions.menu_save)
@@ -10,7 +10,7 @@ class MenuBuilder:
         file_menu.addSeparator()
         file_menu.addAction(actions.menu_exit)
 
-        edit_menu = menubar.addMenu("Правка")
+        edit_menu = menubar.addMenu(window.labels["edit"])
         edit_menu.addAction(actions.menu_undo)
         edit_menu.addAction(actions.menu_redo)
         edit_menu.addSeparator()
@@ -21,7 +21,7 @@ class MenuBuilder:
         edit_menu.addSeparator()
         edit_menu.addAction(actions.menu_select_all)
 
-        text_menu = menubar.addMenu("Текст")
+        text_menu = menubar.addMenu(window.labels["text"])
         text_menu.addAction(actions.menu_text_task)
         text_menu.addAction(actions.menu_text_grammar)
         text_menu.addAction(actions.menu_text_class)
@@ -30,19 +30,19 @@ class MenuBuilder:
         text_menu.addAction(actions.menu_text_literature)
         text_menu.addAction(actions.menu_text_source)
 
-        run_menu = menubar.addMenu("Пуск")
+        run_menu = menubar.addMenu(window.labels["run"])
         run_menu.addAction(actions.menu_run)
 
-        help_menu = menubar.addMenu("Справка")
+        help_menu = menubar.addMenu(window.labels["help"])
         help_menu.addAction(actions.menu_help)
         help_menu.addAction(actions.menu_about)
 
-        localization_menu = menubar.addMenu("Локализация")
-        localization_menu.addAction("Русский")
-        localization_menu.addAction("Английский")
+        localization_menu = menubar.addMenu(window.labels["localization"])
+        localization_menu.addAction(actions.lang_ru)
+        localization_menu.addAction(actions.lang_en)
 
-        view_menu = menubar.addMenu("Вид")
-        font_menu = view_menu.addMenu("Размер шрифта")
+        view_menu = menubar.addMenu(window.labels["view"])
+        font_menu = view_menu.addMenu(window.labels["font_size"])
 
         word_sizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72]
         for size in word_sizes:
