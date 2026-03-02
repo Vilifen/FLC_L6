@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMainWindow, QMessageBox, QStatusBar
-from ui.central import CentralWidget
+from ui.central.central_widget import CentralWidget
 from ui.actions import ActionManager
 from ui.menus import MenuBuilder
 from ui.toolbar import ToolbarBuilder
@@ -137,6 +137,8 @@ class MainWindow(QMainWindow):
 
         self.central.editor.textChanged.connect(self.update_status_bar)
 
+        self.setAcceptDrops(True)
+
     def _build_font_menu(self):
         view_menu = None
         for act in self.menuBar().actions():
@@ -214,3 +216,9 @@ class MainWindow(QMainWindow):
                 if clicked is yes_btn:
                     self.actions.save.trigger()
         event.accept()
+
+    def dragEnterEvent(self, event):
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        self.central.dropEvent(event)

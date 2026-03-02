@@ -1,137 +1,11 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPlainTextEdit,
-    QPushButton, QSizePolicy, QMessageBox, QScrollArea
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy,
+    QMessageBox, QScrollArea, QTextEdit
 )
-from PyQt6.QtGui import QPainter, QColor, QSyntaxHighlighter, QTextCharFormat, QFont
-from PyQt6.QtCore import QRect, QSize, Qt, QRegularExpression
+from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt
 from functools import partial
-
-
-class PythonHighlighter(QSyntaxHighlighter):
-    def __init__(self, document):
-        super().__init__(document)
-        self.rules = []
-
-        def fmt(color, bold=False):
-            f = QTextCharFormat()
-            f.setForeground(QColor(color))
-            if bold:
-                f.setFontWeight(600)
-            return f
-
-        keywords = [
-            "def", "class", "return", "if", "elif", "else", "while", "for",
-            "try", "except", "finally", "with", "as", "import", "from",
-            "pass", "break", "continue", "in", "is", "not", "and", "or",
-            "lambda", "yield", "global", "nonlocal", "assert", "raise"
-        ]
-
-        keyword_format = fmt("#0077cc", True)
-        for kw in keywords:
-            self.rules.append((QRegularExpression(rf"\b{kw}\b"), keyword_format))
-
-        string_format = fmt("#dd1144")
-        self.rules.append((QRegularExpression(r'"[^"\\]*(\\.[^"\\]*)*"'), string_format))
-        self.rules.append((QRegularExpression(r"'[^'\\]*(\\.[^'\\]*)*'"), string_format))
-
-        comment_format = fmt("#009933")
-        self.rules.append((QRegularExpression(r"#.*"), comment_format))
-
-        number_format = fmt("#aa00aa")
-        self.rules.append((QRegularExpression(r"\b[0-9]+\b"), number_format))
-
-    def highlightBlock(self, text):
-        for pattern, form in self.rules:
-            it = pattern.globalMatch(text)
-            while it.hasNext():
-                m = it.next()
-                self.setFormat(m.capturedStart(), m.capturedLength(), form)
-
-
-class LineNumberArea(QWidget):
-    def __init__(self, editor):
-        super().__init__(editor)
-        self.editor = editor
-
-    def sizeHint(self):
-        return QSize(self.editor.line_number_area_width(), 0)
-
-    def paintEvent(self, event):
-        self.editor.line_number_area_paint_event(event)
-
-
-class CodeEditor(QPlainTextEdit):
-    def __init__(self):
-        super().__init__()
-
-        self.setAcceptDrops(False)
-
-        self.line_number_area = LineNumberArea(self)
-        self.blockCountChanged.connect(self.update_line_number_area_width)
-        self.updateRequest.connect(self.update_line_number_area)
-        self.cursorPositionChanged.connect(self.update)
-        self.update_line_number_area_width(0)
-
-        self.highlighter = PythonHighlighter(self.document())
-
-    def dragEnterEvent(self, event):
-        event.ignore()
-
-    def dropEvent(self, event):
-        event.ignore()
-
-    def line_number_area_width(self):
-        digits = len(str(max(1, self.blockCount())))
-        return 12 + self.fontMetrics().horizontalAdvance('9') * digits
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        cr = self.contentsRect()
-        self.line_number_area.setGeometry(
-            QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height())
-        )
-
-    def update_line_number_area_width(self, _):
-        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
-
-    def update_line_number_area(self, rect, dy):
-        if dy:
-            self.line_number_area.scroll(0, dy)
-        else:
-            self.line_number_area.update(
-                0, rect.y(), self.line_number_area.width(), rect.height()
-            )
-
-    def line_number_area_paint_event(self, event):
-        painter = QPainter(self.line_number_area)
-        painter.fillRect(event.rect(), QColor(245, 245, 245))
-
-        block = self.firstVisibleBlock()
-        block_number = block.blockNumber()
-        offset = self.contentOffset()
-        fm = self.fontMetrics()
-
-        while block.isValid():
-            rect = self.blockBoundingGeometry(block).translated(offset)
-            top = rect.top()
-            bottom = rect.bottom()
-
-            if bottom >= event.rect().top() and top <= event.rect().bottom():
-                painter.setPen(QColor(0, 0, 0))
-                painter.drawText(
-                    0,
-                    int(top),
-                    self.line_number_area.width() - 4,
-                    fm.height(),
-                    Qt.AlignmentFlag.AlignRight,
-                    str(block_number + 1)
-                )
-
-            if top > event.rect().bottom():
-                break
-
-            block = block.next()
-            block_number += 1
+from ui.editor.code_editor import CodeEditor
 
 
 class CentralWidget(QWidget):
@@ -473,3 +347,33 @@ class CentralWidget(QWidget):
         self.tabs[self.current_index]["errors_html"] = html
         if self.output_mode == "errors":
             self.output.setHtml(html)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        if not urls:
+            return
+
+        path = urls[0].toLocalFile()
+        if not path:
+            return
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+        except:
+            try:
+                with open(path, "r", encoding="cp1251") as f:
+                    text = f.read()
+            except:
+                return
+
+        self.add_tab(title=path.split("/")[-1])
+        self.editor.setPlainText(text)
+        self.tabs[self.current_index]["text"] = text
+        self.tabs[self.current_index]["modified"] = False
