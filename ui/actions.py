@@ -53,8 +53,52 @@ class ActionManager:
         self.lang_ru = QAction("Русский", window)
         self.lang_en = QAction("English", window)
 
+        self._add_shortcuts()
         self._connect()
         self.update_texts()
+
+    def _add_shortcuts(self):
+        self.new.setShortcut("Ctrl+N")
+        self.menu_new.setShortcut("Ctrl+N")
+
+        self.open.setShortcut("Ctrl+O")
+        self.menu_open.setShortcut("Ctrl+O")
+
+        self.save.setShortcut("Ctrl+S")
+        self.menu_save.setShortcut("Ctrl+S")
+
+        self.menu_save_as.setShortcut("Ctrl+Shift+S")
+
+        self.undo.setShortcut("Ctrl+Z")
+        self.menu_undo.setShortcut("Ctrl+Z")
+
+        self.redo.setShortcut("Ctrl+Y")
+        self.menu_redo.setShortcut("Ctrl+Y")
+
+        self.cut.setShortcut("Ctrl+X")
+        self.menu_cut.setShortcut("Ctrl+X")
+
+        self.copy.setShortcut("Ctrl+C")
+        self.menu_copy.setShortcut("Ctrl+C")
+
+        self.paste.setShortcut("Ctrl+V")
+        self.menu_paste.setShortcut("Ctrl+V")
+
+        self.run.setShortcut("F5")
+        self.menu_run.setShortcut("F5")
+
+        self.help.setShortcut("F1")
+        self.menu_help.setShortcut("F1")
+
+        self.about.setShortcut("Ctrl+I")
+        self.menu_about.setShortcut("Ctrl+I")
+
+        self.menu_exit.setShortcut("Ctrl+Q")
+
+        self.menu_delete.setShortcut("Delete")
+        self.menu_select_all.setShortcut("Ctrl+A")
+
+        self.menu_text_source.setShortcut("Ctrl+L")
 
     def update_texts(self):
         L = self.win.labels
@@ -96,7 +140,6 @@ class ActionManager:
         self.menu_text_source.setText(L["source"])
 
         self.menu_run.setText(L["run"])
-
         self.menu_help.setText(L["help"])
         self.menu_about.setText(L["about"])
 
