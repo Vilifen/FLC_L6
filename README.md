@@ -16,5 +16,7 @@ while ($i < 10) {
 };
 
 # Диаграмма состояний.
+![](https://raw.githubusercontent.com/Vilifen/photo/main/Снимок%20экрана%202026-03-14%20в%2006.25.01.png)
+![](https://raw.githubusercontent.com/Vilifen/photo/main/Снимок%20экрана%202026-03-14%20в%2006.25.08.png)
 
 # Тестовые примеры.
