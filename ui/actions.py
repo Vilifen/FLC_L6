@@ -10,6 +10,8 @@ class ActionManager:
         self.new = QAction(QIcon("ui/icons/create.png"), "", window)
         self.open = QAction(QIcon("ui/icons/open.png"), "", window)
         self.save = QAction(QIcon("ui/icons/save.png"), "", window)
+        self.save_as = QAction(QIcon("ui/icons/save.png"), "", window)
+        self.exit = QAction(QIcon("ui/icons/exit.png"), "", window)
 
         self.undo = QAction(QIcon("ui/icons/cancel.png"), "", window)
         self.redo = QAction(QIcon("ui/icons/repeat.png"), "", window)
@@ -17,6 +19,8 @@ class ActionManager:
         self.copy = QAction(QIcon("ui/icons/copy.png"), "", window)
         self.cut = QAction(QIcon("ui/icons/cut.png"), "", window)
         self.paste = QAction(QIcon("ui/icons/insert.png"), "", window)
+        self.delete = QAction("", window)
+        self.select_all = QAction("", window)
 
         self.run = QAction(QIcon("ui/icons/launch.png"), "", window)
 
@@ -89,12 +93,16 @@ class ActionManager:
         self.new.setText(L["new"])
         self.open.setText(L["open"])
         self.save.setText(L["save"])
+        self.save_as.setText(L["save_as"])
+        self.exit.setText(L["exit"])
 
         self.undo.setText(L["undo"])
         self.redo.setText(L["redo"])
         self.copy.setText(L["copy"])
         self.cut.setText(L["cut"])
         self.paste.setText(L["paste"])
+        self.delete.setText(L["delete"])
+        self.select_all.setText(L["select_all"])
 
         self.run.setText(L["run"])
         self.help.setText(L["help"])
@@ -136,12 +144,16 @@ class ActionManager:
         self.new.triggered.connect(lambda: self.ctrl.file_new(self.win))
         self.open.triggered.connect(lambda: self.ctrl.file_open(self.win))
         self.save.triggered.connect(lambda: self.ctrl.file_save(self.win))
+        self.save_as.triggered.connect(lambda: self.ctrl.file_save_as(self.win))
+        self.exit.triggered.connect(self.win.close)
 
         self.undo.triggered.connect(lambda: self.win.get_editor().undo())
         self.redo.triggered.connect(lambda: self.win.get_editor().redo())
         self.copy.triggered.connect(lambda: self.win.get_editor().copy())
         self.cut.triggered.connect(lambda: self.win.get_editor().cut())
         self.paste.triggered.connect(lambda: self.win.get_editor().paste())
+        self.delete.triggered.connect(lambda: self.win.get_editor().textCursor().removeSelectedText())
+        self.select_all.triggered.connect(lambda: self.win.get_editor().selectAll())
 
         self.menu_undo.triggered.connect(lambda: self.win.get_editor().undo())
         self.menu_redo.triggered.connect(lambda: self.win.get_editor().redo())

@@ -67,7 +67,58 @@ class MainWindow(QMainWindow):
             "errors": "Ошибки",
         }
 
+        self.labels_en = {
+            "file": "File",
+            "edit": "Edit",
+            "text": "Text",
+            "run": "Run",
+            "help": "Help",
+            "localization": "Language",
+            "view": "View",
+            "font_size": "Font size",
+            "new": "New",
+            "open": "Open",
+            "save": "Save",
+            "save_as": "Save As",
+            "exit": "Exit",
+            "undo": "Undo",
+            "redo": "Redo",
+            "cut": "Cut",
+            "copy": "Copy",
+            "paste": "Paste",
+            "delete": "Delete",
+            "select_all": "Select All",
+            "task": "Task",
+            "grammar": "Grammar",
+            "grammar_class": "Grammar classification",
+            "method": "Parsing method",
+            "example": "Example",
+            "literature": "References",
+            "source": "Source code",
+            "about": "About",
+            "info_title": "Information",
+            "error_label": "Error",
+            "forbidden_word": "Error",
+            "line_word": "line",
+            "pos_word": "position",
+            "no_errors": "No errors found.",
+            "help_text": "Help",
+            "about_text": "About",
+            "save_title": "Save file?",
+            "save_text": "Save changes to file",
+            "yes": "Yes",
+            "no": "No",
+            "cancel": "Cancel",
+            "status_lang": "Lang",
+            "status_size": "Size",
+            "status_lines": "Lines",
+            "build": "Build",
+            "errors": "Errors",
+        }
+
         self.labels = self.labels_ru
+        self.language = "ru"
+        self.font_menu = None
 
         self.setWindowTitle("Текстовый редактор")
         self.resize(1000, 700)
@@ -91,13 +142,57 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
         self.actions = ActionManager(self, controller)
-        MenuBuilder(self, self.actions)
+        self.menu_builder = MenuBuilder(self, self.actions)
         ToolbarBuilder(self, self.actions)
 
         self._build_font_menu()
 
         self.central.editor.textChanged.connect(self.update_status_bar)
         self.actions.run.triggered.connect(self.run_scanner_action)
+
+    def set_language(self, lang):
+        if lang == "en":
+            self.labels = self.labels_en
+            self.language = "en"
+        else:
+            self.labels = self.labels_ru
+            self.language = "ru"
+
+        self.actions.update_texts()
+        self.menu_builder.update_menu_titles()
+        if self.font_menu is not None:
+            self.font_menu.setTitle(self.labels["font_size"])
+        self.update_ui_language()
+        self.update_status_bar()
+
+    def update_ui_language(self):
+        self.actions.new.setText(self.labels["new"])
+        self.actions.open.setText(self.labels["open"])
+        self.actions.save.setText(self.labels["save"])
+        self.actions.save_as.setText(self.labels["save_as"])
+        self.actions.exit.setText(self.labels["exit"])
+        self.actions.undo.setText(self.labels["undo"])
+        self.actions.redo.setText(self.labels["redo"])
+        self.actions.cut.setText(self.labels["cut"])
+        self.actions.copy.setText(self.labels["copy"])
+        self.actions.paste.setText(self.labels["paste"])
+        self.actions.delete.setText(self.labels["delete"])
+        self.actions.select_all.setText(self.labels["select_all"])
+        self.actions.run.setText(self.labels["run"])
+        self.actions.help.setText(self.labels["help"])
+        self.actions.about.setText(self.labels["about"])
+
+        self.central.build_btn.setText(self.labels["build"])
+        self.central.err_btn.setText(self.labels["errors"])
+
+        if self.language == "en":
+            self.central.table.setHorizontalHeaderLabels(
+                ["Code", "Type", "Lexeme", "Location"]
+            )
+        else:
+            self.central.table.setHorizontalHeaderLabels(
+                ["Код", "Тип", "Лексема", "Местоположение"]
+            )
 
     def run_scanner_action(self):
         editor = self.central.editor
@@ -144,18 +239,22 @@ class MainWindow(QMainWindow):
         if view_menu is None:
             return
 
-        font_menu = view_menu.addMenu(self.labels["font_size"])
+        self.font_menu = view_menu.addMenu(self.labels["font_size"])
         sizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32]
 
         for size in sizes:
-            action = font_menu.addAction(str(size))
+            action = self.font_menu.addAction(str(size))
             action.triggered.connect(lambda _, s=size: self.central.set_font_size(s))
 
     def update_status_bar(self):
         text = self.central.editor.toPlainText()
         size = len(text.encode("utf-8"))
         lines = text.count("\n") + 1
-        self.status.showMessage(f"Язык: RU    Размер: {size} B    Строк: {lines}")
+        self.status.showMessage(
+            f"{self.labels['status_lang']}: {self.language.upper()}    "
+            f"{self.labels['status_size']}: {size} B    "
+            f"{self.labels['status_lines']}: {lines}"
+        )
 
     def dragEnterEvent(self, event):
         event.acceptProposedAction()
