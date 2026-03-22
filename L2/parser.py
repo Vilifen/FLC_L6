@@ -8,132 +8,127 @@ class Parser:
         self.tokens = tokens
         self.pos = 0
         self.errors = []
-        self.top_level_while_error_reported = False
 
     def parse(self):
-        while not self._eof():
-            self._skip_whitespace()
-            if self._eof():
-                break
-            self._parse_top_level_statement()
+        self._skip_ws()
+        self.parse_start()
         return self.errors
 
-    def _parse_top_level_statement(self):
-        tok = self._cur()
-
-        if tok.type == TokenType.KEYWORD and tok.value == "while":
-            self._advance()
-            self._parse_while()
-            return
-
-        if not self.top_level_while_error_reported:
+    def parse_start(self):
+        self._skip_ws()
+        if not self._accept(TokenType.KEYWORD, "while"):
             self._error("Ожидалось ключевое слово 'while'")
-            self.top_level_while_error_reported = True
-        else:
-            self._advance()
+            return
 
-    def _parse_while(self):
-        self._skip_whitespace()
-        if not self._match(TokenType.SEPARATOR, "("):
+        self._skip_ws()
+        if not self._accept(TokenType.SEPARATOR, "("):
             self._error("Ожидалась '(' после while")
+            self._panic_until({")"})
 
-        self._skip_whitespace()
-        self._skip_expression()
+        self._skip_ws()
+        self.parse_condition()
 
-        self._skip_whitespace()
-        if not self._match(TokenType.SEPARATOR, ")"):
+        self._skip_ws()
+        if not self._accept(TokenType.SEPARATOR, ")"):
             self._error("Ожидалась ')' после условия while")
+            self._panic_until({"{"})
 
-        self._skip_whitespace()
-        if not self._match(TokenType.SEPARATOR, "{"):
+        self._skip_ws()
+        if not self._accept(TokenType.SEPARATOR, "{"):
             self._error("Ожидался '{' после while(...)")
+            self._panic_until({"{"})
 
-        self._parse_block()
+        self._skip_ws()
+        self.parse_body()
 
-        self._skip_whitespace()
-        if not self._match(TokenType.SEPARATOR, ";"):
+        self._skip_ws()
+        if not self._accept(TokenType.SEPARATOR, "}"):
+            self._error("Ожидался '}' после тела цикла")
+            self._panic_until({"}"})
+
+        self._skip_ws()
+        if not self._accept(TokenType.SEPARATOR, ";"):
             self._error("Ожидался ';' после блока while")
+            self._panic_until({";"})
 
-    def _parse_block(self):
-        depth = 1
-        while not self._eof() and depth > 0:
-            self._skip_whitespace()
-            tok = self._cur()
+    def parse_condition(self):
+        self._skip_ws()
+        self.parse_simple_expr()
 
-            if tok.type == TokenType.SEPARATOR and tok.value == "{":
-                depth += 1
-                self._advance()
-                continue
+        self._skip_ws()
+        if self._accept(TokenType.OPERATOR, "&&") or self._accept(TokenType.OPERATOR, "||"):
+            self._skip_ws()
+            self.parse_condition()
 
-            if tok.type == TokenType.SEPARATOR and tok.value == "}":
-                depth -= 1
-                self._advance()
-                continue
+    def parse_simple_expr(self):
+        self._skip_ws()
+        self.parse_var()
 
-            if depth == 1:
-                self._parse_inner_statement()
-            else:
-                self._advance()
-
-    def _parse_inner_statement(self):
-        self._skip_whitespace()
-        if self._eof():
+        self._skip_ws()
+        if not self._accept(TokenType.OPERATOR):
+            self._error("Ожидалась реляционная операция (<, >, <=, >=, ==, !=)")
+            self._panic_until({")"})
             return
 
-        tok = self._cur()
-
-        if tok.type == TokenType.KEYWORD and tok.value == "while":
-            self._advance()
-            self._parse_while()
+        self._skip_ws()
+        if self._accept(TokenType.NUMBER):
             return
 
-        while not self._eof():
-            tok = self._cur()
+        if self._accept(TokenType.IDENTIFIER):
+            return
 
-            if tok.type == TokenType.SEPARATOR and tok.value == ";":
-                self._advance()
-                return
+        self._error("Ожидалось число или переменная после реляционной операции")
+        self._panic_until({")"})
 
-            if tok.type == TokenType.SEPARATOR and tok.value == "}":
-                self._error("Ожидался ';' перед '}'")
-                return
+    def parse_var(self):
+        self._skip_ws()
+        if not self._accept(TokenType.IDENTIFIER):
+            self._error("Ожидалась переменная вида $id")
+            self._panic_until({")", "{", ";", "&&", "||"})
+            return
 
-            self._advance()
+    def parse_body(self):
+        self._skip_ws()
+        self.parse_var()
 
-        self._error("Ожидался ';' в конце выражения")
+        self._skip_ws()
+        if not (self._accept(TokenType.OPERATOR, "++") or self._accept(TokenType.OPERATOR, "--")):
+            self._error("Ожидался оператор ++ или --")
+            self._panic_until({";", "}"})
+            return
 
-    def _skip_expression(self):
-        while not self._eof():
-            tok = self._cur()
-            if tok.type == TokenType.SEPARATOR and tok.value == ")":
-                return
-            self._advance()
+        self._skip_ws()
+        if not self._accept(TokenType.SEPARATOR, ";"):
+            self._error("Ожидался ';' после оператора ++/--")
+            self._panic_until({"}"})
 
-    def _match(self, ttype, value=None):
+    def _accept(self, ttype, value=None):
         if self._eof():
             return False
-        tok = self._cur()
+        tok = self.tokens[self.pos]
         if tok.type == ttype and (value is None or tok.value == value):
-            self._advance()
+            self.pos += 1
             return True
         return False
 
-    def _skip_whitespace(self):
-        while not self._eof() and self._cur().type == TokenType.WHITESPACE:
-            self._advance()
+    def _panic_until(self, sync_values):
+        while not self._eof():
+            tok = self.tokens[self.pos]
+            if tok.type == TokenType.SEPARATOR and tok.value in sync_values:
+                return
+            if tok.value in sync_values:
+                return
+            self.pos += 1
 
-    def _cur(self):
-        return self.tokens[self.pos]
+    def _error(self, msg):
+        tok = self.tokens[self.pos]
+        code = ERROR_CODES["INVALID_STRUCTURE"]
+        self.errors.append(ScanError(code, msg, tok.line, tok.column, tok.value))
+        self.pos += 1
 
-    def _advance(self):
-        if not self._eof():
+    def _skip_ws(self):
+        while not self._eof() and self.tokens[self.pos].type == TokenType.WHITESPACE:
             self.pos += 1
 
     def _eof(self):
         return self.pos >= len(self.tokens) or self.tokens[self.pos].type == TokenType.EOF
-
-    def _error(self, msg):
-        tok = self._cur()
-        code = ERROR_CODES["INVALID_STRUCTURE"]
-        self.errors.append(ScanError(code, msg, tok.line, tok.column, tok.value))
-        self._advance()

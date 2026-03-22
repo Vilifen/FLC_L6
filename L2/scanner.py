@@ -118,18 +118,18 @@ class Scanner:
             self.tokens.append(Token(TokenType.KEYWORD, value, start_line, start_col))
             return
 
-        if value.isalpha():
-            self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
-            return
-
         self.errors.append(
             ScanError(
                 ERROR_CODES["INVALID_CHAR"],
-                "Недопустимое слово",
+                "Переменные должны начинаться с '$'",
                 start_line,
                 start_col,
                 value
             )
+        )
+
+        self.tokens.append(
+            Token(TokenType.IDENTIFIER, value, start_line, start_col)
         )
 
     def _consume_number(self):
