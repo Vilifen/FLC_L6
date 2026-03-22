@@ -8,6 +8,15 @@ class Parser:
         self.tokens = tokens
         self.pos = 0
         self.errors = []
+        self.follow_sets = {
+            "condition": {")"},
+            "after_condition": {"{"},
+            "after_body": {"}"},
+            "after_block": {";"},
+            "simple_expr": {")"},
+            "var": {")", "{", ";", "&&", "||"},
+            "body": {";", "}"},
+        }
 
     def parse(self):
         self._skip_ws()
@@ -18,12 +27,13 @@ class Parser:
         self._skip_ws()
         if not self._accept(TokenType.KEYWORD, "while"):
             self._error("Ожидалось ключевое слово 'while'")
+            self._irons_recover("after_block")
             return
 
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, "("):
             self._error("Ожидалась '(' после while")
-            self._panic_until({")"})
+            self._irons_recover("condition")
 
         self._skip_ws()
         self.parse_condition()
@@ -31,12 +41,12 @@ class Parser:
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, ")"):
             self._error("Ожидалась ')' после условия while")
-            self._panic_until({"{"})
+            self._irons_recover("after_condition")
 
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, "{"):
             self._error("Ожидался '{' после while(...)")
-            self._panic_until({"{"})
+            self._irons_recover("after_condition")
 
         self._skip_ws()
         self.parse_body()
@@ -44,12 +54,12 @@ class Parser:
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, "}"):
             self._error("Ожидался '}' после тела цикла")
-            self._panic_until({"}"})
+            self._irons_recover("after_body")
 
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, ";"):
             self._error("Ожидался ';' после блока while")
-            self._panic_until({";"})
+            self._irons_recover("after_block")
 
     def parse_condition(self):
         self._skip_ws()
@@ -67,7 +77,7 @@ class Parser:
         self._skip_ws()
         if not self._accept(TokenType.OPERATOR):
             self._error("Ожидалась реляционная операция (<, >, <=, >=, ==, !=)")
-            self._panic_until({")"})
+            self._irons_recover("simple_expr")
             return
 
         self._skip_ws()
@@ -78,13 +88,13 @@ class Parser:
             return
 
         self._error("Ожидалось число или переменная после реляционной операции")
-        self._panic_until({")"})
+        self._irons_recover("simple_expr")
 
     def parse_var(self):
         self._skip_ws()
         if not self._accept(TokenType.IDENTIFIER):
             self._error("Ожидалась переменная вида $id")
-            self._panic_until({")", "{", ";", "&&", "||"})
+            self._irons_recover("var")
             return
 
     def parse_body(self):
@@ -94,13 +104,13 @@ class Parser:
         self._skip_ws()
         if not (self._accept(TokenType.OPERATOR, "++") or self._accept(TokenType.OPERATOR, "--")):
             self._error("Ожидался оператор ++ или --")
-            self._panic_until({";", "}"})
+            self._irons_recover("body")
             return
 
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, ";"):
             self._error("Ожидался ';' после оператора ++/--")
-            self._panic_until({"}"})
+            self._irons_recover("after_body")
 
     def _accept(self, ttype, value=None):
         if self._eof():
@@ -111,17 +121,24 @@ class Parser:
             return True
         return False
 
-    def _panic_until(self, sync_values):
+    def _irons_recover(self, nonterminal):
+        follow = self.follow_sets.get(nonterminal, set())
         while not self._eof():
             tok = self.tokens[self.pos]
-            if tok.type == TokenType.SEPARATOR and tok.value in sync_values:
+            if tok.type == TokenType.SEPARATOR and tok.value in follow:
                 return
-            if tok.value in sync_values:
+            if tok.type == TokenType.OPERATOR and tok.value in follow:
+                return
+            if tok.type == TokenType.EOF and "EOF" in follow:
+                return
+            if tok.value in follow:
                 return
             self.pos += 1
 
     def _error(self, msg):
-        tok = self.tokens[self.pos]
+        tok = self.tokens[self.pos] if not self._eof() else None
+        if tok is None:
+            return
         code = ERROR_CODES["INVALID_STRUCTURE"]
         self.errors.append(ScanError(code, msg, tok.line, tok.column, tok.value))
         self.pos += 1
