@@ -11,7 +11,6 @@ from ui.menus import MenuBuilder
 from ui.toolbar import ToolbarBuilder
 
 from L2.integration import run_scanner
-from antlr.antlr_driver import run_antlr_syntax
 from L2.navigation import navigate_to_error
 
 
@@ -201,11 +200,7 @@ class MainWindow(QMainWindow):
 
     def run_scanner_action(self):
         editor = self.central.editor
-        text = editor.toPlainText()
-
-        token_rows, _ = run_scanner(editor)
-        error_rows = run_antlr_syntax(text)
-
+        token_rows, error_rows = run_scanner(editor)
         self.central.set_results(token_rows, error_rows)
 
         self.error_status.showMessage(f"Количество ошибок: {len(error_rows)}")
@@ -224,7 +219,6 @@ class MainWindow(QMainWindow):
             self.central.table.itemClicked.disconnect()
         except:
             pass
-
         self.central.table.itemClicked.connect(on_click)
 
     def show_help(self):
