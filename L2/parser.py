@@ -27,97 +27,70 @@ class Parser:
         self.pos = 0
         self.errors = []
         self.stack = ParseStack()
-        self.follow_sets = {
-            "condition": {")"},
-            "after_condition": {"{"},
-            "after_body": {"}"},
-            "after_block": {";"},
-            "simple_expr": {")"},
-            "var": {")", "{", ";", "&&", "||"},
-            "body": {";", "}"},
-        }
-        self.first_sets = {
-            "condition": {"(", "$id", "$num"},
-            "simple_expr": {"$id", "$num"},
-            "var": {"$id"},
-            "body": {"$id"},
-            "start": {"while"},
-        }
-        self.productions = {
-            "start": ["while", "(", "condition", ")", "{", "body", "}", ";"],
-            "condition": [
-                ["simple_expr"],
-                ["simple_expr", "&&", "condition"],
-                ["simple_expr", "||", "condition"]
-            ],
-            "simple_expr": [["var", "relop", "var"], ["var", "relop", "number"]],
-            "var": [["$id"]],
-            "body": [["var", "++", ";"], ["var", "--", ";"]],
-        }
+        self.body_had_error = False
 
     def parse(self):
+        self.pos = 0
+        self.errors = []
+        self.body_had_error = False
         self._skip_ws()
-        self.stack.push({"type": "start", "position": 0, "production": self.productions["start"]})
         self.parse_start()
         return self.errors
 
     def parse_start(self):
         self._skip_ws()
         if not self._accept(TokenType.KEYWORD, "while"):
-            self._error_with_irons("Ожидалось ключевое слово 'while'")
+            self._error("Ожидалось ключевое слово 'while'")
 
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, "("):
-            self._error_with_irons("Ожидалась '(' после while")
+            self._error("Ожидалась '(' после while")
 
         self._skip_ws()
-        self.stack.push({"type": "condition", "position": 0, "production": self.productions["condition"][0]})
         self.parse_condition()
-        self.stack.pop()
 
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, ")"):
-            self._error_with_irons("Ожидалась ')' после условия while")
+            self._error("Ожидалась ')' после условия while")
 
         self._skip_ws()
         if not self._accept(TokenType.SEPARATOR, "{"):
-            self._error_with_irons("Ожидался '{' после while(...)")
+            self._error("Ожидался '{' после while(...)", advance=False)
 
         self._skip_ws()
-        self.stack.push({"type": "body", "position": 0, "production": self.productions["body"][0]})
         self.parse_body()
-        self.stack.pop()
+
+        # Если в теле была ошибка — НЕ продолжаем разбор структуры
+        if self.body_had_error:
+            return
 
         self._skip_ws()
-        if not self._accept(TokenType.SEPARATOR, "}"):
-            self._error_with_irons("Ожидался '}' после тела цикла")
+        if self._eof() or self.tokens[self.pos].value != "}":
+            self._error("Ожидался '}' после тела цикла")
+            return
 
+        self.pos += 1
         self._skip_ws()
-        if not self._accept(TokenType.SEPARATOR, ";"):
-            self._error_with_irons("Ожидался ';' после блока while")
+
+        if self._eof() or not self._accept(TokenType.SEPARATOR, ";"):
+            self._error("Ожидался ';' после блока while")
 
     def parse_condition(self):
         self._skip_ws()
-        self.stack.push({"type": "simple_expr", "position": 0, "production": self.productions["simple_expr"][0]})
         self.parse_simple_expr()
-        self.stack.pop()
 
         self._skip_ws()
         if self._accept(TokenType.OPERATOR, "&&") or self._accept(TokenType.OPERATOR, "||"):
             self._skip_ws()
-            self.stack.push({"type": "condition", "position": 0, "production": self.productions["condition"][0]})
             self.parse_condition()
-            self.stack.pop()
 
     def parse_simple_expr(self):
         self._skip_ws()
-        self.stack.push({"type": "var", "position": 0, "production": self.productions["var"][0]})
         self.parse_var()
-        self.stack.pop()
 
         self._skip_ws()
         if not self._accept(TokenType.OPERATOR):
-            self._error_with_irons("Ожидалась реляционная операция (<, >, <=, >=, ==, !=)")
+            self._error("Ожидалась реляционная операция (<, >, <=, >=, ==, !=)")
             return
 
         self._skip_ws()
@@ -127,27 +100,48 @@ class Parser:
         if self._accept(TokenType.IDENTIFIER):
             return
 
-        self._error_with_irons("Ожидалось число или переменная после реляционной операции")
+        self._error("Ожидалось число или переменная после реляционной операции")
 
     def parse_var(self):
         self._skip_ws()
         if not self._accept(TokenType.IDENTIFIER):
-            self._error_with_irons("Ожидалась переменная вида $id")
+            self._error("Ожидалась переменная вида $id")
+            return
+
+        tok = self.tokens[self.pos - 1]
+        if not tok.value.startswith("$"):
+            self._error("Ожидалась переменная вида $id", advance=True)
 
     def parse_body(self):
         self._skip_ws()
-        self.stack.push({"type": "var", "position": 0, "production": self.productions["var"][0]})
-        self.parse_var()
-        self.stack.pop()
 
-        self._skip_ws()
-        if not (self._accept(TokenType.OPERATOR, "++") or self._accept(TokenType.OPERATOR, "--")):
-            self._error_with_irons("Ожидался оператор ++ или --")
+        if self._eof() or self.tokens[self.pos].value == "}":
+            self.body_had_error = True
+            self._error("Тело цикла не может быть пустым", advance=False)
             return
 
-        self._skip_ws()
-        if not self._accept(TokenType.SEPARATOR, ";"):
-            self._error_with_irons("Ожидался ';' после оператора ++/--")
+        while not self._eof() and self.tokens[self.pos].value != "}":
+
+            if self.tokens[self.pos].type != TokenType.IDENTIFIER:
+                self.body_had_error = True
+                self._error("Ожидалась переменная вида $id")
+                return
+
+            self.parse_var()
+
+            self._skip_ws()
+            if not (self._accept(TokenType.OPERATOR, "++") or self._accept(TokenType.OPERATOR, "--")):
+                self.body_had_error = True
+                self._error("Ожидался оператор ++ или --")
+                return
+
+            self._skip_ws()
+            if not self._accept(TokenType.SEPARATOR, ";"):
+                self.body_had_error = True
+                self._error("Ожидался ';' после оператора ++/--")
+                return
+
+            self._skip_ws()
 
     def _accept(self, ttype, value=None):
         if self._eof():
@@ -155,18 +149,18 @@ class Parser:
         tok = self.tokens[self.pos]
         if tok.type == ttype and (value is None or tok.value == value):
             self.pos += 1
-            if self.stack.top():
-                self.stack.top()["position"] += 1
             return True
         return False
 
-    def _error_with_irons(self, msg):
+    def _error(self, msg, advance=True):
         if self._eof():
-            return
-        tok = self.tokens[self.pos]
+            tok = self.tokens[-1]
+        else:
+            tok = self.tokens[self.pos]
         code = ERROR_CODES["INVALID_STRUCTURE"]
         self.errors.append(ScanError(code, msg, tok.line, tok.column, tok.value))
-        self.pos += 1
+        if advance and not self._eof():
+            self.pos += 1
 
     def _skip_ws(self):
         while not self._eof() and self.tokens[self.pos].type == TokenType.WHITESPACE:

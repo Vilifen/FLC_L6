@@ -112,7 +112,7 @@ class Scanner:
             self.tokens.append(Token(TokenType.KEYWORD, value, start_line, start_col))
             return
 
-        self.tokens.append(Token(TokenType.UNKNOWN, value, start_line, start_col))
+        self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
 
     def _consume_number(self):
         start_line, start_col = self.line, self.col
