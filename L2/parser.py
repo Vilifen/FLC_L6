@@ -84,11 +84,14 @@ class Parser:
                 self._skip_ws()
             return
 
+        self._skip_ws()
+
         if self._eof():
+            self._irons_correction([";"], "';' в конце инструкции while", is_eof=True)
             return
 
         if not self._accept(TokenType.SEPARATOR, ";"):
-            self._irons_correction([";"], "';' после блока while")
+            self._irons_correction([";"], "';' в конце инструкции while")
 
     def parse_condition(self):
         self._skip_ws()
@@ -133,21 +136,26 @@ class Parser:
 
         if self._eof():
             self.body_had_error = True
-            self._irons_correction(["$i++"], "непустое тело цикла", is_eof=True)
+            self._irons_correction(["}"], "'}' после тела цикла", is_eof=True)
             return
 
         if self.tokens[self.pos].value == "}":
             self.body_had_error = True
-            self._irons_correction(["$i++"], "непустое тело цикла", advance=False)
+            self._irons_correction(["}"], "'}' после тела цикла", advance=False)
             return
 
         while not self._eof() and self.tokens[self.pos].value != "}":
             if self.tokens[self.pos].type != TokenType.IDENTIFIER:
                 self.body_had_error = True
-                self._irons_correction(["$id"], "переменная вида $id")
+                self._irons_correction(["}"], "'}' после тела цикла")
                 return
 
+            prev_errors = len(self.errors)
             self.parse_var()
+            if len(self.errors) > prev_errors:
+                self.body_had_error = True
+                self._skip_until_stmt_end()
+                return
 
             self._skip_ws()
             if self._eof():
@@ -173,18 +181,21 @@ class Parser:
 
             self._skip_ws()
 
+    def _skip_until_stmt_end(self):
+        while not self._eof() and self.tokens[self.pos].value not in [";", "}"]:
+            self.pos += 1
+        if not self._eof() and self.tokens[self.pos].value == ";":
+            self.pos += 1
+        self._skip_ws()
+
     def _irons_correction(self, q_candidates, expected_msg=None, advance=True, is_var_correction=False, is_eof=False):
         if self._eof() or is_eof:
-            if self.tokens:
-                tok = self.tokens[-1]
-            else:
-                tok = None
+            tok = self.tokens[-1] if self.tokens else None
         else:
             tok = self.tokens[self.pos]
 
         j = self._get_current_terminal()
         jy = self._get_remaining_chain()
-
         L = self._build_L_list()
 
         if not is_eof and j and not self._is_derivable(j):
@@ -192,7 +203,6 @@ class Parser:
             j = self._get_current_terminal()
 
         incomplete_cause = self._find_incomplete_cause()
-
         q = self._select_q(q_candidates, incomplete_cause)
 
         if q:
@@ -251,10 +261,12 @@ class Parser:
         return list(set(L))
 
     def _is_derivable(self, terminal):
-        derivable = ["while", "(", ")", "{", "}", ";", "$", "$id", "$i",
-                     "++", "--", "<", ">", "==", "!=", "<=", ">=", "+", "-"]
+        derivable = [
+            "while", "(", ")", "{", "}", ";",
+            "++", "--", "<", ">", "==", "!=", "<=", ">=", "+", "-"
+        ]
         for d in derivable:
-            if terminal and (d in terminal or terminal in d):
+            if terminal and d == terminal:
                 return True
         return False
 
