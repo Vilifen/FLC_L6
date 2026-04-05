@@ -7,38 +7,39 @@
 Лабораторную работу сделала студентка группы АВТ-313 Федулова В.В.
 
 # Вариант задания.
+```
 103. Цикл while на языке PHP
      
 while ($i < 10) {
     $i++;
 };
+```
 
+```
 while ($counter < 5) {
     $counter++;
     $counter++;
 };
+```
 
 # Разработка грамматики (полное определение разработанной грамматики).
 
-1) <START> ->  'while' <WHILE>
-2)  <WHILE> -> ‘(‘ <LPARENTHESIS>
-3)  <LPARENTHESIS> -> '$' <ID_OUTSIDE>
-4)  <ID_OUTSIDE> -> letter <ID_OUTSIDE>
-5)  <ID_OUTSIDE> -> letter <ID_OUTSIDE> | digit <ID_OUTSIDE> | ‘_’ <ID_OUTSIDE> | <RELATION_OPERATION>
-6)  <RELATION_OPERATION> -> ‘<’ <SMALLER> | ‘>’ <BIGGER> | ‘<=’ <SMALLER_OR_EQUAL> | ‘>=’ <BIGGER_OR_EQUAL> | ‘==’ <EQUAL> | ‘!=’ <NOT_EQUAL>
-7)  <RELATION_OPERATION> -> '$' <ID_OUTSIDE*>
-8)  <ID_OUTSIDE*> -> letter <ID_OUTSIDE*>
-9)  <ID_OUTSIDE*> -> letter <ID_OUTSIDE*> | digit <ID_OUTSIDE*> | ‘_’ <ID_OUTSIDE*>
-10)  <ID_OUTSIDE*> -> <OPERAND> | ‘)’ <RPARENTHESIS>
-11)  <OPERAND> -> ‘&&’ <OPERAND_AND> | ‘||’ <OPERAND_OR>
-12)  <OPERAND> -> <ID_OUTSIDE>
-<RPARENTHESIS> -> ‘{’ <LBRACE>
-13) <LBRACE> -> ''$' <ID_INSIDE>
-14) <ID_INSIDE> -> letter <ID_INSIDE>
-15) <ID_INSIDE> -> letter <ID_INSIDE> | digit <ID_INSIDE> | ‘_’ <ID_INSIDE> | ‘++’ <INCREMENT> | ‘--’ <DECREMENT>
-16)  <INCREMENT> | <DECREMENT>  -> ‘;’ <SEMICOLON>
-17) <SEMICOLON> -> ‘}’ <RBRACE>
-18) <RBRACE> -> ‘;’ <SEMICOLON>
+```
+1) <START> -> 'while' <KEYWORD_WHILE>
+2) <KEYWORD_WHILE> -> '(' <LEFT_BRACE>
+3) <LEFT_BRACE> -> '$' <ID_START>
+4) <ID_START> -> letter <ID>
+5) <ID> -> letter <ID> | digit <ID> | '_' <ID> | '<' <EXPRESSION> | '>' <EXPRESSION> | '==' <EXPRESSION> | '>=' <EXPRESSION> | '<=' <EXPRESSION> | '!=' <EXPRESSION>
+6)<EXPRESSION> -> digit <NUMBER> 
+7)<NUMBER> -> digit <NUMBER> | '||' <LEFT_BRACE> | '&&' <LEFT_BRACE> | ')' <RIGHT_BRACE>
+8)<RIGHT_BRACE> -> '{' <LEFT_CURLY_BRACE>
+9)<LEFT_CURLY_BRACE> -> ' '$' <SYMBOL_ID_START>
+10)<SYMBOL_ID_START> -> letter <ID_IN>
+11)<ID_IN> -> letter <ID_IN> | digit <ID_IN> | '_' <ID_IN> | '++' <OPERATOR_CHANGE> | '--' <OPERATOR_CHANGE>
+12) <OPERATOR_CHANGE> -> ';' <SEMICOLON_IN>
+13) <SEMICOLON_IN> -> ''}' <RIGHT_CURLY_BRACE>
+14) <RIGHT_CURLY_BRACE> -> ';'  
+```
 
 # Классификация грамматики
 Данная грамматика контекстно-свободная, поскольку каждое правило имеет вид A → α
