@@ -12,6 +12,7 @@ from ui.toolbar import ToolbarBuilder
 
 from L2.integration import run_scanner
 from L2.navigation import navigate_to_error
+from ANTLR.antlr_handler import execute_antlr_analysis
 
 
 class MainWindow(QMainWindow):
@@ -19,101 +20,42 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.labels_ru = {
-            "file": "Файл",
-            "edit": "Правка",
-            "text": "Текст",
-            "run": "Пуск",
-            "help": "Справка",
-            "localization": "Локализация",
-            "view": "Вид",
-            "font_size": "Размер шрифта",
-            "new": "Создать",
-            "open": "Открыть",
-            "save": "Сохранить",
-            "save_as": "Сохранить как",
-            "exit": "Выход",
-            "undo": "Отменить",
-            "redo": "Повторить",
-            "cut": "Вырезать",
-            "copy": "Копировать",
-            "paste": "Вставить",
-            "delete": "Удалить",
-            "select_all": "Выделить всё",
-            "task": "Постановка задачи",
-            "grammar": "Грамматика",
-            "grammar_class": "Классификация грамматики",
-            "method": "Метод анализа",
-            "example": "Тестовый пример",
-            "literature": "Список литературы",
-            "source": "Исходный код программы",
-            "about": "О программе",
-            "info_title": "Информация",
-            "error_label": "Ошибка",
-            "forbidden_word": "Ошибка",
-            "line_word": "строка",
-            "pos_word": "позиция",
-            "no_errors": "Ошибок не найдено.",
-            "help_text": "Справка",
-            "about_text": "О программе",
-            "save_title": "Сохранить файл?",
-            "save_text": "Сохранить изменения в файле",
-            "yes": "Да",
-            "no": "Нет",
-            "cancel": "Отмена",
-            "status_lang": "Язык",
-            "status_size": "Размер",
-            "status_lines": "Строк",
-            "build": "Сборка",
-            "errors": "Ошибки",
+            "file": "Файл", "edit": "Правка", "text": "Текст", "run": "Пуск",
+            "help": "Справка", "localization": "Локализация", "view": "Вид",
+            "font_size": "Размер шрифта", "new": "Создать", "open": "Открыть",
+            "save": "Сохранить", "save_as": "Сохранить как", "exit": "Выход",
+            "undo": "Отменить", "redo": "Повторить", "cut": "Вырезать",
+            "copy": "Копировать", "paste": "Вставить", "delete": "Удалить",
+            "select_all": "Выделить всё", "task": "Постановка задачи",
+            "grammar": "Грамматика", "grammar_class": "Классификация грамматики",
+            "method": "Метод анализа", "example": "Тестовый пример",
+            "literature": "Список литературы", "source": "Исходный код программы",
+            "about": "О программе", "info_title": "Информация",
+            "error_label": "Ошибка", "forbidden_word": "Ошибка",
+            "line_word": "строка", "pos_word": "позиция",
+            "no_errors": "Ошибок не найдено.", "help_text": "Справка",
+            "about_text": "О программе", "save_title": "Сохранить файл?",
+            "save_text": "Сохранить изменения в файле", "yes": "Да", "no": "Нет",
+            "cancel": "Отмена", "status_lang": "Язык", "status_size": "Размер",
+            "status_lines": "Строк", "build": "Сборка", "errors": "Ошибки",
         }
 
         self.labels_en = {
-            "file": "File",
-            "edit": "Edit",
-            "text": "Text",
-            "run": "Run",
-            "help": "Help",
-            "localization": "Language",
-            "view": "View",
-            "font_size": "Font size",
-            "new": "New",
-            "open": "Open",
-            "save": "Save",
-            "save_as": "Save As",
-            "exit": "Exit",
-            "undo": "Undo",
-            "redo": "Redo",
-            "cut": "Cut",
-            "copy": "Copy",
-            "paste": "Paste",
-            "delete": "Delete",
-            "select_all": "Select All",
-            "task": "Task",
-            "grammar": "Grammar",
-            "grammar_class": "Grammar classification",
-            "method": "Parsing method",
-            "example": "Example",
-            "literature": "References",
-            "source": "Source code",
-            "about": "About",
-            "info_title": "Information",
-            "error_label": "Error",
-            "forbidden_word": "Error",
-            "line_word": "line",
-            "pos_word": "position",
-            "no_errors": "No errors found.",
-            "help_text": "Help",
-            "about_text": "About",
-            "save_title": "Save file?",
-            "save_text": "Save changes to file",
-            "yes": "Yes",
-            "no": "No",
-            "cancel": "Cancel",
-            "status_lang": "Lang",
-            "status_size": "Size",
-            "status_lines": "Lines",
-            "build": "Build",
-            "errors": "Errors",
+            "file": "File", "edit": "Edit", "text": "Text", "run": "Run",
+            "help": "Help", "localization": "Language", "view": "View",
+            "font_size": "Font size", "new": "New", "open": "Open",
+            "save": "Save", "save_as": "Save As", "exit": "Exit",
+            "undo": "Undo", "redo": "Redo", "cut": "Cut", "copy": "Copy",
+            "paste": "Paste", "delete": "Delete", "select_all": "Select All",
+            "task": "Task", "grammar": "Grammar", "grammar_class": "Grammar classification",
+            "method": "Parsing method", "example": "Example", "literature": "References",
+            "source": "Source code", "about": "About", "info_title": "Information",
+            "error_label": "Error", "forbidden_word": "Error", "line_word": "line",
+            "pos_word": "position", "no_errors": "No errors found.",
+            "help_text": "Help", "about_text": "About", "save_title": "Save file?",
+            "save_text": "Save changes to file", "yes": "Yes", "no": "No",
+            "cancel": "Cancel", "status_lang": "Lang", "status_size": "Size",
+            "status_lines": "Lines", "build": "Build", "errors": "Errors",
         }
 
         self.labels = self.labels_ru
@@ -150,9 +92,7 @@ class MainWindow(QMainWindow):
         ToolbarBuilder(self, self.actions)
 
         self._build_font_menu()
-
         self.central.editor.textChanged.connect(self.update_status_bar)
-        self.actions.run.triggered.connect(self.run_scanner_action)
 
     def set_language(self, lang):
         if lang == "en":
@@ -164,7 +104,7 @@ class MainWindow(QMainWindow):
 
         self.actions.update_texts()
         self.menu_builder.update_menu_titles()
-        if self.font_menu is not None:
+        if self.font_menu:
             self.font_menu.setTitle(self.labels["font_size"])
         self.update_ui_language()
         self.update_status_bar()
@@ -190,28 +130,31 @@ class MainWindow(QMainWindow):
         self.central.err_btn.setText(self.labels["errors"])
 
         if self.language == "en":
-            self.central.table.setHorizontalHeaderLabels(
-                ["Code", "Type", "Lexeme", "Location"]
-            )
+            self.central.table.setHorizontalHeaderLabels(["Code", "Type", "Lexeme", "Location"])
         else:
-            self.central.table.setHorizontalHeaderLabels(
-                ["Код", "Тип", "Лексема", "Местоположение"]
-            )
+            self.central.table.setHorizontalHeaderLabels(["Код", "Тип", "Лексема", "Местоположение"])
 
     def run_scanner_action(self):
         editor = self.central.editor
         token_rows, error_rows = run_scanner(editor)
         self.central.set_results(token_rows, error_rows)
-
         self.error_status.showMessage(f"Количество ошибок: {len(error_rows)}")
+        self._connect_table_navigation(editor)
 
+    def run_antlr_action(self):
+        editor = self.central.editor
+        text = editor.toPlainText()
+
+        token_rows, all_errors = execute_antlr_analysis(text)
+
+        self.central.set_results(token_rows, all_errors)
+        self.error_status.showMessage(f"Всего ошибок ANTLR: {len(all_errors)}")
+        self._connect_table_navigation(editor)
+
+    def _connect_table_navigation(self, editor):
         def on_click(item):
             row = item.row()
-            rows = (
-                self.central.token_rows
-                if self.central.output_mode == "build"
-                else self.central.error_rows
-            )
+            rows = self.central.token_rows if self.central.output_mode == "build" else self.central.error_rows
             if 0 <= row < len(rows):
                 navigate_to_error(editor, rows[row]["line"], rows[row]["col"])
 
@@ -225,14 +168,11 @@ class MainWindow(QMainWindow):
         dlg = QDialog(self)
         dlg.setWindowTitle(self.labels["help_text"])
         dlg.resize(900, 650)
-
         layout = QVBoxLayout(dlg)
         browser = QTextBrowser()
         layout.addWidget(browser)
-
         path = os.path.abspath("ui/html files/user_guide.html")
         browser.setSource(QUrl.fromLocalFile(path))
-
         dlg.exec()
 
     def _build_font_menu(self):
@@ -242,12 +182,9 @@ class MainWindow(QMainWindow):
             if menu and menu.title() == self.labels["view"]:
                 view_menu = menu
                 break
-        if view_menu is None:
-            return
-
+        if view_menu is None: return
         self.font_menu = view_menu.addMenu(self.labels["font_size"])
         sizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32]
-
         for size in sizes:
             action = self.font_menu.addAction(str(size))
             action.triggered.connect(lambda _, s=size: self.central.set_font_size(s))
@@ -264,6 +201,9 @@ class MainWindow(QMainWindow):
 
     def get_editor(self):
         return self.central.editor
+
+    def get_output(self):
+        return self.central.table
 
     def dragEnterEvent(self, event):
         event.acceptProposedAction()

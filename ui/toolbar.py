@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QToolBar
 from PyQt6.QtCore import QSize
 
-
 class ToolbarBuilder:
     def __init__(self, window, actions):
         toolbar = QToolBar()
@@ -51,3 +50,4 @@ class ToolbarBuilder:
 
         toolbar.addAction(actions.help)
         toolbar.addAction(actions.about)
+        toolbar.addAction(actions.antlr)

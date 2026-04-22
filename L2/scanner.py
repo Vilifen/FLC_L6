@@ -3,16 +3,9 @@ from .token import Token
 from .scan_error import ScanError
 from .error_codes import ERROR_CODES
 
-
 class Scanner:
     KEYWORDS = {"while"}
-
-    OPERATORS = {
-        "++", "--",
-        "<=", ">=", "==", "!=", "&&", "||",
-        "<", ">", "_",
-    }
-
+    OPERATORS = {"++", "--", "<=", ">=", "==", "!=", "&&", "||", "<", ">", "_"}
     SEPARATORS = {"(", ")", "{", "}", ";"}
 
     def __init__(self):
@@ -35,12 +28,7 @@ class Scanner:
 
         while not self._eof():
             ch = self._cur()
-
-            if ch in " \t\r":
-                self._add(TokenType.WHITESPACE, ch)
-                self._advance()
-            elif ch == "\n":
-                self._add(TokenType.WHITESPACE, ch)
+            if ch in " \t\r\n":
                 self._advance()
             elif ch == "$":
                 self._consume_identifier()
@@ -71,8 +59,7 @@ class Scanner:
 
     def _advance(self, steps=1):
         for _ in range(steps):
-            if self._eof():
-                return
+            if self._eof(): return
             ch = self.text[self.pos]
             self.pos += 1
             if ch == "\n":
@@ -84,103 +71,59 @@ class Scanner:
     def _add(self, ttype, value):
         self.tokens.append(Token(ttype, value, self.line, self.col))
 
-    def _error(self, message, code_key, value, line=None, col=None):
+    def _error(self, message, code_key, value, line, col):
         code = ERROR_CODES[code_key]
-        self.errors.append(
-            ScanError(code, message, line if line is not None else self.line,
-                      col if col is not None else self.col, value)
-        )
+        self.errors.append(ScanError(code, message, line, col, value))
 
     def _consume_identifier(self):
         start_line, start_col = self.line, self.col
         value = self._cur()
         self._advance()
-
         while not self._eof() and (self._cur().isalnum() or self._cur() == "_"):
             value += self._cur()
             self._advance()
-
         if value == "$":
-            self._error("Ожидалось имя переменной после '$'", "INVALID_CHAR", value, start_line, start_col)
-
-        self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
+            self._error("Ожидалось имя переменной", "INVALID_CHAR", value, start_line, start_col)
+            self.tokens.append(Token(TokenType.UNKNOWN, value, start_line, start_col))
+        else:
+            self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
 
     def _consume_word(self):
         start_line, start_col = self.line, self.col
         value = ""
-
         while not self._eof() and (self._cur().isalnum() or self._cur() == "_"):
             value += self._cur()
             self._advance()
-
-        if value in self.KEYWORDS:
-            self.tokens.append(Token(TokenType.KEYWORD, value, start_line, start_col))
-            return
-
-        self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
+        ttype = TokenType.KEYWORD if value in self.KEYWORDS else TokenType.IDENTIFIER
+        self.tokens.append(Token(ttype, value, start_line, start_col))
 
     def _consume_number(self):
         start_line, start_col = self.line, self.col
         value = ""
-
         while not self._eof() and self._cur().isdigit():
             value += self._cur()
             self._advance()
-
         self.tokens.append(Token(TokenType.NUMBER, value, start_line, start_col))
 
     def _starts_operator(self):
         ch1 = self._cur()
-        ch2 = self._peek()
-        return (ch1 + ch2) in self.OPERATORS or ch1 in self.OPERATORS
+        return (ch1 + self._peek()) in self.OPERATORS or ch1 in self.OPERATORS
 
     def _consume_operator(self):
         start_line, start_col = self.line, self.col
-        ch1 = self._cur()
-        ch2 = self._peek()
-
-        if ch1 + ch2 in self.OPERATORS:
-            value = ch1 + ch2
+        op2 = self._cur() + self._peek()
+        if op2 in self.OPERATORS:
+            self._add(TokenType.OPERATOR, op2)
             self._advance(2)
         else:
-            value = ch1
+            self._add(TokenType.OPERATOR, self._cur())
             self._advance(1)
-
-        self.tokens.append(Token(TokenType.OPERATOR, value, start_line, start_col))
-
-    def _is_separator_or_space_or_op_start(self, ch):
-        if ch == "":
-            return True
-        if ch.isspace():
-            return True
-        if ch in self.SEPARATORS:
-            return True
-        if (ch + self._peek()) in self.OPERATORS or ch in self.OPERATORS:
-            return True
-        return False
-
-    def _is_valid_char(self, ch):
-        if ch == "":
-            return False
-        if ch.isspace():
-            return True
-        if ch.isalnum():
-            return True
-        if ch in self.SEPARATORS:
-            return True
-        if ch == "$":
-            return True
-        if (ch + self._peek()) in self.OPERATORS or ch in self.OPERATORS:
-            return True
-        return False
 
     def _consume_invalid(self):
         start_line, start_col = self.line, self.col
         value = ""
-
-        while not self._eof() and not self._is_valid_char(self._cur()):
+        while not self._eof() and not self._cur().isspace() and self._cur() not in self.SEPARATORS and not self._starts_operator():
             value += self._cur()
             self._advance()
-
-        if value:
-            self._error("Недопустимая последовательность символов", "INVALID_CHAR", value, start_line, start_col)
+        self._error("Недопустимая последовательность", "INVALID_CHAR", value, start_line, start_col)
+        self.tokens.append(Token(TokenType.UNKNOWN, value, start_line, start_col))
