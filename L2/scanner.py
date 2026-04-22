@@ -3,6 +3,7 @@ from .token import Token
 from .scan_error import ScanError
 from .error_codes import ERROR_CODES
 
+
 class Scanner:
     KEYWORDS = {"while"}
     OPERATORS = {"++", "--", "<=", ">=", "==", "!=", "&&", "||", "<", ">", "_"}
@@ -28,7 +29,9 @@ class Scanner:
 
         while not self._eof():
             ch = self._cur()
+
             if ch in " \t\r\n":
+                self._add(TokenType.WHITESPACE, ch)
                 self._advance()
             elif ch == "$":
                 self._consume_identifier()
@@ -71,27 +74,39 @@ class Scanner:
     def _add(self, ttype, value):
         self.tokens.append(Token(ttype, value, self.line, self.col))
 
-    def _error(self, message, code_key, value, line, col):
+    def _error(self, message, code_key, value, line=None, col=None):
         code = ERROR_CODES[code_key]
-        self.errors.append(ScanError(code, message, line, col, value))
+        self.errors.append(
+            ScanError(code, message, line if line is not None else self.line,
+                      col if col is not None else self.col, value)
+        )
+
+    def _is_separator_or_space_or_op_start(self, ch):
+        if ch == "": return True
+        if ch.isspace(): return True
+        if ch in self.SEPARATORS: return True
+        if (ch + self._peek()) in self.OPERATORS or ch in self.OPERATORS: return True
+        return False
+
+    def _is_valid_char(self, ch):
+        if ch == "": return False
+        if ch.isspace() or ch.isalnum() or ch == "$" or ch in self.SEPARATORS: return True
+        if (ch + self._peek()) in self.OPERATORS or ch in self.OPERATORS: return True
+        return False
 
     def _consume_identifier(self):
         start_line, start_col = self.line, self.col
         value = self._cur()
         self._advance()
-        while not self._eof() and (self._cur().isalnum() or self._cur() == "_"):
+        while not self._eof() and not self._is_separator_or_space_or_op_start(self._cur()):
             value += self._cur()
             self._advance()
-        if value == "$":
-            self._error("Ожидалось имя переменной", "INVALID_CHAR", value, start_line, start_col)
-            self.tokens.append(Token(TokenType.UNKNOWN, value, start_line, start_col))
-        else:
-            self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
+        self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
 
     def _consume_word(self):
         start_line, start_col = self.line, self.col
         value = ""
-        while not self._eof() and (self._cur().isalnum() or self._cur() == "_"):
+        while not self._eof() and not self._is_separator_or_space_or_op_start(self._cur()):
             value += self._cur()
             self._advance()
         ttype = TokenType.KEYWORD if value in self.KEYWORDS else TokenType.IDENTIFIER
@@ -106,8 +121,7 @@ class Scanner:
         self.tokens.append(Token(TokenType.NUMBER, value, start_line, start_col))
 
     def _starts_operator(self):
-        ch1 = self._cur()
-        return (ch1 + self._peek()) in self.OPERATORS or ch1 in self.OPERATORS
+        return (self._cur() + self._peek()) in self.OPERATORS or self._cur() in self.OPERATORS
 
     def _consume_operator(self):
         start_line, start_col = self.line, self.col
@@ -122,8 +136,10 @@ class Scanner:
     def _consume_invalid(self):
         start_line, start_col = self.line, self.col
         value = ""
-        while not self._eof() and not self._cur().isspace() and self._cur() not in self.SEPARATORS and not self._starts_operator():
+        while not self._eof() and not self._is_valid_char(self._cur()):
             value += self._cur()
             self._advance()
-        self._error("Недопустимая последовательность", "INVALID_CHAR", value, start_line, start_col)
-        self.tokens.append(Token(TokenType.UNKNOWN, value, start_line, start_col))
+        if value:
+            self._error("Недопустимая последовательность символов", "INVALID_CHAR", value, start_line, start_col)
+            # Добавляем UNKNOWN, чтобы парсер знал, что здесь "дыра"
+            self.tokens.append(Token(TokenType.UNKNOWN, value, start_line, start_col))
