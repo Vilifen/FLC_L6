@@ -13,105 +13,105 @@ class Parser:
         self.pos = 0
         self.errors = []
         while not self._eof():
-            self._skip_junk(check_semicolon=True)
+            self._skip_noise()
             if self._eof(): break
             self.parse_while_stmt()
         return self.errors
 
-    def _error(self, msg, tok=None):
-        target = tok if tok else (self.tokens[self.pos] if not self._eof() else self.tokens[-1])
-        if not target: return
+    def _error(self, msg, tok):
+        # Строгий контроль: не добавляем ошибку, если на этой позиции она уже была
+        if self.errors and self.errors[-1].line == tok.line and self.errors[-1].column == tok.column:
+            return
         self.errors.append(ScanError(
             ERROR_CODES["INVALID_STRUCTURE"],
             f"Ошибка: {msg}",
-            target.line, target.column, target.value
+            tok.line, tok.column, tok.value
         ))
 
-    def _skip_junk(self, check_semicolon=False):
+    def _skip_noise(self):
+        # Просто перепрыгиваем пробелы
+        while not self._eof() and self.tokens[self.pos].type == TokenType.WHITESPACE:
+            self.pos += 1
+
+    def _sync_expect(self, condition, error_msg):
+        """
+        Ищет токен. Если видит мусор или несоответствие:
+        1. Выдает 'недопустимый символ' (если это мусор) ИЛИ ожидаемую ошибку.
+        2. Поглощает токены, пока не найдет то, что нужно.
+        """
+        self._skip_noise()
+        first_error_reported = False
+
         while not self._eof():
             tok = self.tokens[self.pos]
-            if tok.type == TokenType.WHITESPACE:
-                self.pos += 1
-            elif tok.type == TokenType.UNKNOWN:
-                self._error("недопустимый символ", tok)
-                self.pos += 1
-            elif check_semicolon and tok.value == ";":
-                self._error("недопустимый символ", tok)
-                self.pos += 1
+
+            # Проверка на совпадение
+            is_match = False
+            if callable(condition):
+                is_match = condition(tok)
+            elif isinstance(condition, list):
+                is_match = tok.value in condition
             else:
-                break
+                is_match = tok.value == condition or tok.type == condition
 
-    def _match(self, expected_val, error_msg, check_semicolon=False):
-        self._skip_junk(check_semicolon=check_semicolon)
-        if self._eof():
-            self._error(f"Ожидалось {error_msg}")
-            return False
+            if is_match:
+                self.pos += 1
+                return True
 
-        tok = self.tokens[self.pos]
-        if tok.value == expected_val or (isinstance(expected_val, list) and tok.value in expected_val):
+            # Если не совпало — это ошибка
+            if not first_error_reported:
+                # Если это реально мусорный токен (типа ! или @)
+                if tok.type == TokenType.UNKNOWN or tok.value == ";":
+                    self._error("недопустимый символ", tok)
+                else:
+                    self._error(error_msg, tok)
+                first_error_reported = True
+
+            # Поглощаем токен и ищем дальше
             self.pos += 1
-            return True
+            self._skip_noise()
 
-        if tok.type != TokenType.UNKNOWN:
-            self._error(error_msg)
-            self.pos += 1
         return False
 
     def parse_while_stmt(self):
-        self._skip_junk(check_semicolon=True)
-        if self._eof(): return
+        # Ожидаем структуру, игнорируя мусор между элементами
+        self._sync_expect("while", "ключевое слово 'while'")
+        self._sync_expect("(", "'('")
 
-        if self.tokens[self.pos].value != "while":
-            if self.tokens[self.pos].type != TokenType.UNKNOWN:
-                self._error("ключевое слово 'while'")
-            while not self._eof() and self.tokens[self.pos].value not in ["(", "{"]:
-                self.pos += 1
-                self._skip_junk(check_semicolon=True)
-        else:
-            self.pos += 1
+        # Переменная $id
+        self._sync_expect(lambda t: t.type == TokenType.IDENTIFIER and t.value.startswith("$"),
+                          "переменная '$id'")
 
-        self._match("(", "'('", check_semicolon=True)
-        self._skip_junk(check_semicolon=True)
+        # Оператор сравнения
+        self._sync_expect(["<", ">", "==", "!=", "<=", ">="], "оператор сравнения")
 
-        if not self._eof() and self.tokens[self.pos].type == TokenType.IDENTIFIER:
-            self.pos += 1
-        else:
-            if not self._eof() and self.tokens[self.pos].type != TokenType.UNKNOWN:
-                self._error("переменная '$id'")
-                if self.tokens[self.pos].value not in ["<", ">", "==", "!=", "<=", ">="]:
-                    self.pos += 1
+        # Число или переменная
+        self._sync_expect(lambda t: t.type in [TokenType.NUMBER, TokenType.IDENTIFIER],
+                          "число или переменная")
 
-        self._match(["<", ">", "==", "!=", "<=", ">="], "оператор сравнения", check_semicolon=True)
-        self._skip_junk(check_semicolon=True)
+        self._sync_expect(")", "')'")
+        self._sync_expect("{", "'{'")
 
-        if not self._eof() and (self.tokens[self.pos].type in [TokenType.NUMBER, TokenType.IDENTIFIER]):
-            self.pos += 1
-        else:
-            if not self._eof() and self.tokens[self.pos].type != TokenType.UNKNOWN:
-                self._error("число или переменная")
-                if self.tokens[self.pos].value != ")":
-                    self.pos += 1
+        # Тело цикла
+        while not self._eof():
+            self._skip_noise()
+            if self._eof() or self.tokens[self.pos].value == "}":
+                break
 
-        self._match(")", "')'", check_semicolon=True)
-        self._match("{", "'{'", check_semicolon=True)
-
-        while not self._eof() and self.tokens[self.pos].value != "}":
-            self._skip_junk(check_semicolon=True)
-            if self._eof() or self.tokens[self.pos].value == "}": break
-
+            # Разбор $i++;
             if self.tokens[self.pos].type == TokenType.IDENTIFIER:
                 self.pos += 1
-                self._match(["++", "--"], "++ или --", check_semicolon=True)
-                self._match(";", "';'")  # Здесь ';' законна
+                self._sync_expect(["++", "--"], "++ или --")
+                self._sync_expect(";", "';'")
             else:
-                if self.tokens[self.pos].type != TokenType.UNKNOWN and self.tokens[self.pos].value != ";":
-                    self._error("инструкция")
-                elif self.tokens[self.pos].value == ";":
-                    self._error("недопустимый символ")
+                # Если в теле встречен мусор (не идентификатор)
+                tok = self.tokens[self.pos]
+                self._error(
+                    "недопустимый символ" if tok.type == TokenType.UNKNOWN or tok.value == ";" else "инструкция", tok)
                 self.pos += 1
 
-        self._match("}", "'}'", check_semicolon=True)
-        self._match(";", "';'")  # Здесь ';' законна
+        self._sync_expect("}", "'}'")
+        self._sync_expect(";", "';'")
 
     def _eof(self):
         return self.pos >= len(self.tokens) or self.tokens[self.pos].type == TokenType.EOF

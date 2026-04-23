@@ -1,12 +1,10 @@
 from .token_types import TokenType
 from .token import Token
-from .scan_error import ScanError
-from .error_codes import ERROR_CODES
 
 class Scanner:
     KEYWORDS = {"while"}
     OPERATORS = {"++", "--", "<=", ">=", "==", "!=", "&&", "||", "<", ">", "_"}
-    SEPARATORS = {"(", ")", "{", "}"}  # Убрали ';' отсюда
+    SEPARATORS = {"(", ")", "{", "}"}
 
     def __init__(self):
         self.text = ""
@@ -30,7 +28,7 @@ class Scanner:
                 self._advance()
             elif ch == "$":
                 self._consume_identifier()
-            elif ch == ";":  # Специфичная обработка для точки с запятой
+            elif ch == ";":
                 self._add(TokenType.SEPARATOR, ";")
                 self._advance()
             elif ch.isalpha() or ch == "_":
@@ -43,6 +41,7 @@ class Scanner:
             elif self._starts_operator():
                 self._consume_operator()
             else:
+                # Склеиваем мусор в один блок
                 start_line, start_col = self.line, self.col
                 val = ""
                 while self.pos < len(self.text):
