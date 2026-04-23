@@ -23,7 +23,6 @@ class Parser:
             self._skip_ws()
 
         lex_error_lines = {e.line for e in self.errors if e.code == ERROR_CODES["INVALID_CHAR"]}
-
         self.errors = [
             e for e in self.errors
             if not (e.code == ERROR_CODES["INVALID_STRUCTURE"] and e.line in lex_error_lines)
@@ -36,7 +35,7 @@ class Parser:
             return
 
         if self._eof():
-            tok = self.tokens[-1] if self.tokens else None
+            tok = self.tokens[-1] if len(self.tokens) > 0 else None
         else:
             tok = self.tokens[self.pos]
 
@@ -81,18 +80,16 @@ class Parser:
         tok = self.tokens[self.pos]
         if tok.value != "while":
             self._error("ключевое слово 'while'")
-            while not self._eof() and self.tokens[self.pos].value not in ["while", "("]:
-                self.pos += 1
-                self._skip_ws()
-            if not self._eof() and self.tokens[self.pos].value == "while":
+            if tok.value not in ["(", "{", "$"]:
                 self.pos += 1
         else:
             self.pos += 1
+
         self.parse_keyword_while()
 
     def parse_keyword_while(self):
-        if self._match_with_recovery(["("], [TokenType.IDENTIFIER, "$"], "'('"):
-            self.parse_left_brace()
+        self._match_with_recovery(["("], ["$", "==", "!=", "<", ">", ")", "{"], "'('")
+        self.parse_left_brace()
 
     def parse_left_brace(self):
         ops = ["<", ">", "==", ">=", "<=", "!="]
@@ -101,19 +98,19 @@ class Parser:
             tok = self.tokens[self.pos]
             if tok.type == TokenType.IDENTIFIER and tok.value.startswith("$"):
                 self.pos += 1
-            else:
+                self.consecutive_errors = 0
+            elif tok.value not in ops and tok.value != ")":
                 self._error("переменная вида '$id'")
-                while not self._eof() and self.tokens[self.pos].value not in ops and self.tokens[self.pos].value != ")":
+                if tok.value not in ["{", "}"]:
                     self.pos += 1
-                    self._skip_ws()
+
         self.parse_expression_operator()
 
     def parse_expression_operator(self):
         ops = ["<", ">", "==", ">=", "<=", "!="]
-        if self._match_with_recovery(ops, [TokenType.NUMBER, TokenType.IDENTIFIER], "оператор сравнения"):
-            self.parse_expression()
-        else:
-            self.parse_expression()
+        if not self._match_with_recovery(ops, [TokenType.NUMBER, TokenType.IDENTIFIER, ")", "{"], "оператор сравнения"):
+            pass
+        self.parse_expression()
 
     def parse_expression(self):
         self._skip_ws()
@@ -121,13 +118,12 @@ class Parser:
         tok = self.tokens[self.pos]
         if tok.type == TokenType.NUMBER or (tok.type == TokenType.IDENTIFIER and tok.value.startswith("$")):
             self.pos += 1
-            self.parse_tail()
+            self.consecutive_errors = 0
         else:
-            self._error("число или переменная '$id'")
-            while not self._eof() and self.tokens[self.pos].value not in ["||", "&&", ")", "{"]:
+            if tok.value not in ["||", "&&", ")", "{"]:
+                self._error("число или переменная '$id'")
                 self.pos += 1
-                self._skip_ws()
-            self.parse_tail()
+        self.parse_tail()
 
     def parse_tail(self):
         self._skip_ws()
@@ -138,18 +134,18 @@ class Parser:
             self.parse_left_brace()
         elif tok.value == ")":
             self.pos += 1
+            self.consecutive_errors = 0
             self.parse_right_brace()
         else:
             self._error("')' или логический оператор")
-            while not self._eof() and self.tokens[self.pos].value not in [")", "{", "}"]:
+            if tok.value != "{":
                 self.pos += 1
-                self._skip_ws()
-            if not self._eof() and self.tokens[self.pos].value in [")", "{"]:
-                self.parse_tail()
+            self.parse_right_brace()
 
     def parse_right_brace(self):
-        if self._match_with_recovery(["{"], [TokenType.IDENTIFIER, "}"], "'{'"):
-            self.parse_left_curly_brace()
+        if not self._match_with_recovery(["{"], [TokenType.IDENTIFIER, "$", "}"], "'{'"):
+            pass
+        self.parse_left_curly_brace()
 
     def parse_left_curly_brace(self):
         while not self._eof() and not self.stop_parsing:
@@ -158,21 +154,25 @@ class Parser:
             tok = self.tokens[self.pos]
             if tok.value == "}":
                 self.pos += 1
+                self.consecutive_errors = 0
                 self.parse_final_semicolon()
                 return
             if tok.type == TokenType.IDENTIFIER and tok.value.startswith("$"):
                 self.pos += 1
+                self.consecutive_errors = 0
                 self.parse_id_in_operator()
             else:
+                if tok.value == "while": return
                 self._error("инструкция ($id++) или '}'")
                 self.pos += 1
 
     def parse_id_in_operator(self):
-        if self._match_with_recovery(["++", "--"], [";", "}"], "++ или --"):
-            self.parse_operator_change()
+        if not self._match_with_recovery(["++", "--"], [";", "}"], "++ или --"):
+            pass
+        self.parse_operator_change()
 
     def parse_operator_change(self):
-        self._match_with_recovery([";"], ["$", "}"], "';'")
+        self._match_with_recovery([";"], ["$", "}", "while"], "';'")
 
     def parse_final_semicolon(self):
         self._match_with_recovery([";"], ["while", TokenType.EOF], "';'")
@@ -183,4 +183,4 @@ class Parser:
 
     def _eof(self):
         return self.pos >= len(self.tokens) or (
-                    self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.EOF)
+                self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.EOF)
