@@ -28,26 +28,34 @@ class Parser:
 
         return self.errors
 
-    def _error(self, msg):
+    def _error(self, msg, custom_tok=None):
         if self.stop_parsing:
             return
 
-        if self._eof():
+        if custom_tok:
+            tok = custom_tok
+        elif self._eof():
             tok = self.tokens[-1] if len(self.tokens) > 0 else None
-            line = tok.line if tok else 1
-            col = (tok.column + len(tok.value)) if tok else 1
-            val = ""
         else:
             tok = self.tokens[self.pos]
-            line, col, val = tok.line, tok.column, tok.value
 
-        if tok and tok.type == TokenType.UNKNOWN:
-            return
+        if tok:
+            if tok.type == TokenType.UNKNOWN:
+                return
 
-        self.errors.append(ScanError(ERROR_CODES["INVALID_STRUCTURE"], f"Ошибка: {msg}", line, col, val))
+            line = tok.line
+            col = tok.column
+            if self._eof() and not custom_tok:
+                col += len(tok.value)
+                val = ""
+            else:
+                val = tok.value
 
-    def _match_with_recovery(self, expected_vals, error_msg):
-        self._skip_ws()
+            self.errors.append(
+                ScanError(ERROR_CODES["INVALID_STRUCTURE"], f"Ошибка: {msg}", line, col, val))
+
+    def _match_with_recovery(self, expected_vals, error_msg, allowed_brackets=None):
+        self._skip_extra_brackets(allowed_brackets)
         if self._eof():
             self._error(f"Ожидалось: {error_msg}")
             return False
@@ -60,8 +68,24 @@ class Parser:
         self._error(f"Ожидалось: {error_msg}, получено '{tok.value}'")
         return False
 
+    def _skip_extra_brackets(self, allowed_brackets=None):
+        if allowed_brackets is None:
+            allowed_brackets = []
+
+        self._skip_ws()
+        while not self._eof():
+            tok = self.tokens[self.pos]
+            if tok.value in ["(", ")"] and tok.value not in allowed_brackets:
+                self._error(f"недопустимый символ '{tok.value}'")
+                self.pos += 1
+                self._skip_ws()
+            else:
+                break
+
     def parse_start(self):
         if self._eof(): return
+        self._skip_extra_brackets(allowed_brackets=["while"])
+
         tok = self.tokens[self.pos]
         if tok.value != "while":
             self._error("ключевое слово 'while'")
@@ -72,11 +96,13 @@ class Parser:
         self.parse_keyword_while()
 
     def parse_keyword_while(self):
-        self._match_with_recovery(["("], "'('")
-        self.parse_left_brace()
+        if self._match_with_recovery(["("], "'('", allowed_brackets=["("]):
+            self.parse_left_brace()
+        else:
+            self.parse_left_brace()
 
     def parse_left_brace(self):
-        self._skip_ws()
+        self._skip_extra_brackets(allowed_brackets=["$"])
         if not self._eof():
             tok = self.tokens[self.pos]
             if tok.type == TokenType.IDENTIFIER and tok.value.startswith("$"):
@@ -94,7 +120,7 @@ class Parser:
         self.parse_expression()
 
     def parse_expression(self):
-        self._skip_ws()
+        self._skip_extra_brackets()
         if self._eof():
             self._error("число или переменная '$id'")
             return
@@ -110,7 +136,7 @@ class Parser:
             self.parse_tail()
 
     def parse_tail(self):
-        self._skip_ws()
+        self._skip_extra_brackets(allowed_brackets=["||", "&&", ")"])
         if self._eof():
             self._error("')'")
             return
@@ -128,15 +154,12 @@ class Parser:
             self.parse_right_brace()
 
     def parse_right_brace(self):
-        if self._match_with_recovery(["{"], "'{'"):
-            self.parse_left_curly_brace()
-        else:
-            self.parse_left_curly_brace()
+        self._match_with_recovery(["{"], "'{'", allowed_brackets=["{"])
+        self.parse_left_curly_brace()
 
     def parse_left_curly_brace(self):
-        # Цикл обработки инструкций внутри {}
         while not self._eof():
-            self._skip_ws()
+            self._skip_extra_brackets(allowed_brackets=["}", "$"])
             if self._eof(): break
             tok = self.tokens[self.pos]
 
@@ -147,25 +170,25 @@ class Parser:
 
             if tok.type == TokenType.IDENTIFIER and tok.value.startswith("$"):
                 self.pos += 1
+                self._skip_extra_brackets(allowed_brackets=["++", "--"])
                 self.parse_id_in_operator()
+                self._skip_extra_brackets(allowed_brackets=[";", "}"])
+
+                if not self._eof() and self.tokens[self.pos].value == ";":
+                    self.pos += 1
             else:
                 if tok.value == "while": return
                 self._error("инструкция ($id++)")
                 self.pos += 1
 
-        # Если дошли сюда — файл кончился, а '}' не найдена
         self._error("'}'")
         self.parse_final_semicolon()
 
     def parse_id_in_operator(self):
-        self._match_with_recovery(["++", "--"], "++ или --")
-        self.parse_operator_change()
-
-    def parse_operator_change(self):
-        self._match_with_recovery([";"], "';'")
+        self._match_with_recovery(["++", "--"], "++ или --", allowed_brackets=["++", "--"])
 
     def parse_final_semicolon(self):
-        self._match_with_recovery([";"], "';'")
+        self._match_with_recovery([";"], "';'", allowed_brackets=[";"])
 
     def _skip_ws(self):
         while not self._eof() and self.tokens[self.pos].type == TokenType.WHITESPACE:
