@@ -3,7 +3,6 @@ from .token import Token
 from .scan_error import ScanError
 from .error_codes import ERROR_CODES
 
-
 class Scanner:
     KEYWORDS = {"while"}
     OPERATORS = {"++", "--", "<=", ">=", "==", "!=", "&&", "||", "<", ">", "_"}
@@ -45,7 +44,7 @@ class Scanner:
             elif self._starts_operator():
                 self._consume_operator()
             else:
-                self._consume_invalid()
+                self._consume_unknown()
 
         self.tokens.append(Token(TokenType.EOF, "", self.line, self.col))
         return self.tokens, self.errors
@@ -74,13 +73,6 @@ class Scanner:
     def _add(self, ttype, value):
         self.tokens.append(Token(ttype, value, self.line, self.col))
 
-    def _error(self, message, code_key, value, line=None, col=None):
-        code = ERROR_CODES[code_key]
-        self.errors.append(
-            ScanError(code, message, line if line is not None else self.line,
-                      col if col is not None else self.col, value)
-        )
-
     def _is_separator_or_space_or_op_start(self, ch):
         if ch == "": return True
         if ch.isspace(): return True
@@ -88,29 +80,16 @@ class Scanner:
         if (ch + self._peek()) in self.OPERATORS or ch in self.OPERATORS: return True
         return False
 
-    def _is_valid_char(self, ch):
-        if ch == "": return False
-        if ch.isspace() or ch.isalnum() or ch == "$" or ch in self.SEPARATORS: return True
-        if (ch + self._peek()) in self.OPERATORS or ch in self.OPERATORS: return True
-        return False
-
     def _consume_identifier(self):
         start_line, start_col = self.line, self.col
         value = self._cur()
         self._advance()
-
         content = ""
         while not self._eof() and not self._is_separator_or_space_or_op_start(self._cur()):
             content += self._cur()
             self._advance()
-
         full_value = value + content
-
-        if not content:
-            self._error("Отсутствует имя переменной после '$'", "INVALID_CHAR", full_value, start_line, start_col)
-            self.tokens.append(Token(TokenType.UNKNOWN, full_value, start_line, start_col))
-        elif not all(c.isalnum() or c == '_' for c in content):
-            self._error("Недопустимые символы в имени переменной", "INVALID_CHAR", full_value, start_line, start_col)
+        if not content or not all(c.isalnum() or c == '_' for c in content):
             self.tokens.append(Token(TokenType.UNKNOWN, full_value, start_line, start_col))
         else:
             self.tokens.append(Token(TokenType.IDENTIFIER, full_value, start_line, start_col))
@@ -139,19 +118,14 @@ class Scanner:
         start_line, start_col = self.line, self.col
         op2 = self._cur() + self._peek()
         if op2 in self.OPERATORS:
-            self._add(TokenType.OPERATOR, op2)
+            self.tokens.append(Token(TokenType.OPERATOR, op2, start_line, start_col))
             self._advance(2)
         else:
-            self._add(TokenType.OPERATOR, self._cur())
+            self.tokens.append(Token(TokenType.OPERATOR, self._cur(), start_line, start_col))
             self._advance(1)
 
-    def _consume_invalid(self):
+    def _consume_unknown(self):
         start_line, start_col = self.line, self.col
-        value = ""
-        while not self._eof() and not self._is_valid_char(self._cur()):
-            value += self._cur()
-            self._advance()
-
-        if value:
-            self._error("Недопустимая последовательность символов", "INVALID_CHAR", value, start_line, start_col)
-            self.tokens.append(Token(TokenType.UNKNOWN, value, start_line, start_col))
+        val = self._cur()
+        self._advance()
+        self.tokens.append(Token(TokenType.UNKNOWN, val, start_line, start_col))
