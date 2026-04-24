@@ -10,8 +10,8 @@ from ui.actions import ActionManager
 from ui.menus import MenuBuilder
 from ui.toolbar import ToolbarBuilder
 
-from L2.integration import run_scanner
-from L2.navigation import navigate_to_error
+from Core.integration import run_scanner
+from Core.navigation import navigate_to_error
 
 
 class MainWindow(QMainWindow):
