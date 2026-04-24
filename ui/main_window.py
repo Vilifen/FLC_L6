@@ -12,7 +12,6 @@ from ui.toolbar import ToolbarBuilder
 
 from L2.integration import run_scanner
 from L2.navigation import navigate_to_error
-from ANTLR.antlr_handler import execute_antlr_analysis
 
 
 class MainWindow(QMainWindow):
@@ -139,16 +138,6 @@ class MainWindow(QMainWindow):
         token_rows, error_rows = run_scanner(editor)
         self.central.set_results(token_rows, error_rows)
         self.error_status.showMessage(f"Количество ошибок: {len(error_rows)}")
-        self._connect_table_navigation(editor)
-
-    def run_antlr_action(self):
-        editor = self.central.editor
-        text = editor.toPlainText()
-
-        token_rows, all_errors = execute_antlr_analysis(text)
-
-        self.central.set_results(token_rows, all_errors)
-        self.error_status.showMessage(f"Всего ошибок ANTLR: {len(all_errors)}")
         self._connect_table_navigation(editor)
 
     def _connect_table_navigation(self, editor):

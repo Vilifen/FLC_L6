@@ -35,7 +35,6 @@ class MenuBuilder:
 
         self.run_menu = menubar.addMenu(window.labels["run"])
         self.run_menu.addAction(actions.menu_run)
-        self.run_menu.addAction(actions.menu_antlr)
 
         self.help_menu = menubar.addMenu(window.labels["help"])
         self.help_menu.addAction(actions.menu_help)

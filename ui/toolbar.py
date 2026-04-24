@@ -50,4 +50,3 @@ class ToolbarBuilder:
 
         toolbar.addAction(actions.help)
         toolbar.addAction(actions.about)
-        toolbar.addAction(actions.antlr)

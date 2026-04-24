@@ -22,7 +22,6 @@ class ActionManager:
         self.select_all = QAction("", window)
 
         self.run = QAction(QIcon("ui/icons/launch.png"), "", window)
-        self.antlr = QAction(QIcon("photo/antlr.png"), "", window)
 
         self.help = QAction(QIcon("ui/icons/reference.png"), "", window)
         self.about = QAction(QIcon("ui/icons/information.png"), "", window)
@@ -50,7 +49,6 @@ class ActionManager:
         self.menu_text_source = QAction("", window)
 
         self.menu_run = QAction("", window)
-        self.menu_antlr = QAction(QIcon("photo/antlr.png"), "", window)
 
         self.menu_help = QAction("", window)
         self.menu_about = QAction("", window)
@@ -77,7 +75,6 @@ class ActionManager:
         self.menu_delete.setShortcut(QKeySequence.StandardKey.Delete)
         self.menu_select_all.setShortcut(QKeySequence.StandardKey.SelectAll)
         self.menu_run.setShortcut("F5")
-        self.menu_antlr.setShortcut("F6")
         self.menu_help.setShortcut(QKeySequence.StandardKey.HelpContents)
         self.menu_about.setShortcut("Ctrl+I")
         self.menu_exit.setShortcut(QKeySequence.StandardKey.Quit)
@@ -98,7 +95,6 @@ class ActionManager:
         self.delete.setText(L["delete"])
         self.select_all.setText(L["select_all"])
         self.run.setText(L["run"])
-        self.antlr.setText("ANTLR")
         self.help.setText(L["help"])
         self.about.setText(L["about"])
         self.menu_new.setText(L["new"])
@@ -121,7 +117,6 @@ class ActionManager:
         self.menu_text_literature.setText(L["literature"])
         self.menu_text_source.setText(L["source"])
         self.menu_run.setText(L["run"])
-        self.menu_antlr.setText("ANTLR")
         self.menu_help.setText(L["help"])
         self.menu_about.setText(L["about"])
 
@@ -159,8 +154,6 @@ class ActionManager:
         self.menu_text_source.triggered.connect(lambda: self._info(self.win.labels["source"]))
         self.menu_run.triggered.connect(self.win.run_scanner_action)
         self.run.triggered.connect(self.win.run_scanner_action)
-        self.menu_antlr.triggered.connect(self.win.run_antlr_action)
-        self.antlr.triggered.connect(self.win.run_antlr_action)
         self.menu_help.triggered.connect(self.win.show_help)
         self.help.triggered.connect(self.win.show_help)
         self.menu_about.triggered.connect(lambda: self.ctrl.about(self.win, self.win.get_output()))
