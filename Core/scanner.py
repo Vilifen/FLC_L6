@@ -37,8 +37,7 @@ class Scanner:
             elif char.isspace():
                 self._handle_whitespace()
             elif char in operators:
-                self._add_token(operators[char], char)
-                self._advance()
+                self._handle_operator(char, operators[char])
             elif char.isdigit():
                 self._handle_number()
             elif char == '$':
@@ -49,14 +48,41 @@ class Scanner:
         self._add_token(TokenType.EOF, "")
         return self.tokens, self.errors
 
+    def _handle_operator(self, char, type_):
+        start_col = self.col
+        count = 0
+        # Проверяем, не идет ли следом такой же оператор (кроме скобок)
+        if char in '+-*/%':
+            temp_pos = self.pos
+            while temp_pos < len(self.text) and self.text[temp_pos] == char:
+                count += 1
+                temp_pos += 1
+
+            if count > 1:
+                value = char * count
+                self.errors.append(ScanError(
+                    ErrorCode.UNEXPECTED_CHAR,
+                    "Непредвиденная лексема",
+                    self.line,
+                    start_col,
+                    value
+                ))
+                self.tokens.append(Token(TokenType.ERROR, value, self.line, start_col))
+                for _ in range(count):
+                    self._advance()
+                return
+
+        self._add_token(type_, char)
+        self._advance()
+
     def _handle_unexpected(self):
         start_col = self.col
         value = ""
-        known_starts = {'$', '+', '-', '*', '/', '%', '(', ')', '\n'}
+        stop_chars = {'$', '+', '-', '*', '/', '%', '(', ')', '\n'}
 
         while self.pos < len(self.text):
             char = self.text[self.pos]
-            if char.isspace() or char in known_starts or char.isdigit():
+            if char.isspace() or char in stop_chars or char.isdigit():
                 break
             value += char
             self._advance()
