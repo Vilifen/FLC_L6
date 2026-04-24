@@ -3,6 +3,7 @@ from .token import Token
 from .scan_error import ScanError
 from .error_codes import ErrorCode
 
+
 class Scanner:
     def __init__(self):
         self.text = ""
@@ -20,6 +21,13 @@ class Scanner:
         self.tokens = []
         self.errors = []
 
+        operators = {
+            '+': TokenType.PLUS, '-': TokenType.MINUS,
+            '*': TokenType.MUL, '/': TokenType.DIV,
+            '%': TokenType.MOD, '(': TokenType.LPAREN,
+            ')': TokenType.RPAREN, '\n': TokenType.NEWLINE
+        }
+
         while self.pos < len(self.text):
             char = self.text[self.pos]
 
@@ -28,38 +36,40 @@ class Scanner:
                 self._advance()
             elif char.isspace():
                 self._handle_whitespace()
-            elif char == '+':
-                self._add_token(TokenType.PLUS, char)
-                self._advance()
-            elif char == '-':
-                self._add_token(TokenType.MINUS, char)
-                self._advance()
-            elif char == '*':
-                self._add_token(TokenType.MUL, char)
-                self._advance()
-            elif char == '/':
-                self._add_token(TokenType.DIV, char)
-                self._advance()
-            elif char == '%':
-                self._add_token(TokenType.MOD, char)
-                self._advance()
-            elif char == '(':
-                self._add_token(TokenType.LPAREN, char)
-                self._advance()
-            elif char == ')':
-                self._add_token(TokenType.RPAREN, char)
+            elif char in operators:
+                self._add_token(operators[char], char)
                 self._advance()
             elif char.isdigit():
                 self._handle_number()
             elif char == '$':
                 self._handle_id()
             else:
-                self.errors.append(ScanError(ErrorCode.UNEXPECTED_CHAR, "Непредвиденный символ", self.line, self.col, char))
-                self._add_token(TokenType.ERROR, char)
-                self._advance()
+                self._handle_unexpected()
 
         self._add_token(TokenType.EOF, "")
         return self.tokens, self.errors
+
+    def _handle_unexpected(self):
+        start_col = self.col
+        value = ""
+        known_starts = {'$', '+', '-', '*', '/', '%', '(', ')', '\n'}
+
+        while self.pos < len(self.text):
+            char = self.text[self.pos]
+            if char.isspace() or char in known_starts or char.isdigit():
+                break
+            value += char
+            self._advance()
+
+        if value:
+            self.errors.append(ScanError(
+                ErrorCode.UNEXPECTED_CHAR,
+                "Непредвиденная лексема",
+                self.line,
+                start_col,
+                value
+            ))
+            self.tokens.append(Token(TokenType.ERROR, value, self.line, start_col))
 
     def _advance(self):
         if self.pos < len(self.text):
@@ -95,5 +105,11 @@ class Scanner:
                 self._advance()
             self.tokens.append(Token(TokenType.ID, value, self.line, start_col))
         else:
-            self.errors.append(ScanError(ErrorCode.INVALID_ID, "Неверный формат идентификатора", self.line, start_col, value))
+            self.errors.append(ScanError(
+                ErrorCode.INVALID_ID,
+                "Неверный формат идентификатора",
+                self.line,
+                start_col,
+                value
+            ))
             self.tokens.append(Token(TokenType.ERROR, value, self.line, start_col))
