@@ -7,11 +7,12 @@ def run_scanner(editor):
     scanner = Scanner()
     tokens, lex_errors = scanner.scan(text)
     parser = Parser(tokens)
-    syntax_errors = parser.parse()
+    syntax_errors, quadruples = parser.parse()  # quadruples - список объектов Quadruple
 
     raw_errors = lex_errors + syntax_errors
     token_rows = []
     error_rows = []
+    quad_rows = []
 
     for t in tokens:
         token_rows.append({
@@ -49,5 +50,14 @@ def run_scanner(editor):
                 "col": e.column,
                 "description": e.message
             })
+    
+    # Преобразуем тетрады в словари для отображения
+    for quad in quadruples:
+        quad_rows.append({
+            "operation": quad.op,
+            "arg1": quad.arg1,
+            "arg2": quad.arg2,
+            "result": quad.result
+        })
 
-    return token_rows, error_rows
+    return token_rows, error_rows, quad_rows

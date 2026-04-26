@@ -16,9 +16,10 @@ class CentralWidget(QWidget):
         self.current_index = -1
         self.untitled_counter = 1
         self.font_size = 14
-        self.output_mode = "build"
+        self.output_mode = "build"  # build, errors, quadruples
         self.token_rows = []
         self.error_rows = []
+        self.quadruple_rows = []  # Добавляем для хранения тетрад
 
         self.setAcceptDrops(True)
 
@@ -84,9 +85,16 @@ class CentralWidget(QWidget):
         self.err_btn.setCheckable(True)
         self.err_btn.setFixedHeight(32)
         self.err_btn.clicked.connect(lambda: self.switch_output("errors"))
+        
+        # Новая кнопка для тетрад
+        self.quad_btn = QPushButton("Тетрады")
+        self.quad_btn.setCheckable(True)
+        self.quad_btn.setFixedHeight(32)
+        self.quad_btn.clicked.connect(lambda: self.switch_output("quadruples"))
 
         self.output_tabs_layout.addWidget(self.build_btn)
         self.output_tabs_layout.addWidget(self.err_btn)
+        self.output_tabs_layout.addWidget(self.quad_btn)  # Добавляем кнопку тетрад
 
         self.table = QTableWidget()
         self.table.setColumnCount(4)
@@ -234,20 +242,28 @@ class CentralWidget(QWidget):
         self.editor.setPlainText(data["text"])
         self.editor.blockSignals(False)
 
-    def set_results(self, token_rows, error_rows):
+    def set_results(self, token_rows, error_rows, quadruple_rows=None):  # Добавляем параметр
         self.token_rows = token_rows
         self.error_rows = error_rows
+        if quadruple_rows is not None:
+            self.quadruple_rows = quadruple_rows
         self.switch_output(self.output_mode)
 
     def switch_output(self, mode):
         self.output_mode = mode
         self.build_btn.setChecked(mode == "build")
         self.err_btn.setChecked(mode == "errors")
-        rows = self.token_rows if mode == "build" else self.error_rows
-        self.show_results_table(rows)
+        self.quad_btn.setChecked(mode == "quadruples")  # Добавляем проверку для тетрад
+        
+        if mode == "build":
+            self.show_results_table(self.token_rows, mode)
+        elif mode == "errors":
+            self.show_results_table(self.error_rows, mode)
+        elif mode == "quadruples":
+            self.show_quadruples_table()
 
-    def show_results_table(self, rows):
-        if self.output_mode == "errors":
+    def show_results_table(self, rows, mode):
+        if mode == "errors":
             self.table.setColumnCount(3)
             self.table.setHorizontalHeaderLabels(["Неверный фрагмент", "Местоположение", "Описание"])
 
@@ -283,6 +299,26 @@ class CentralWidget(QWidget):
                 self.table.setItem(i, 1, QTableWidgetItem(type_))
                 self.table.setItem(i, 2, QTableWidgetItem(lexeme))
                 self.table.setItem(i, 3, QTableWidgetItem(location))
+
+    def show_quadruples_table(self):
+        """Отображение таблицы с тетрадами"""
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["Операция", "Аргумент 1", "Аргумент 2", "Результат"])
+        
+        if not self.quadruple_rows:
+            self.table.setRowCount(1)
+            self.table.setItem(0, 0, QTableWidgetItem(""))
+            self.table.setItem(0, 1, QTableWidgetItem(""))
+            self.table.setItem(0, 2, QTableWidgetItem(""))
+            self.table.setItem(0, 3, QTableWidgetItem("Нет тетрад для отображения"))
+            return
+        
+        self.table.setRowCount(len(self.quadruple_rows))
+        for i, quad in enumerate(self.quadruple_rows):
+            self.table.setItem(i, 0, QTableWidgetItem(str(quad.get("operation", ""))))
+            self.table.setItem(i, 1, QTableWidgetItem(str(quad.get("arg1", ""))))
+            self.table.setItem(i, 2, QTableWidgetItem(str(quad.get("arg2", ""))))
+            self.table.setItem(i, 3, QTableWidgetItem(str(quad.get("result", ""))))
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():

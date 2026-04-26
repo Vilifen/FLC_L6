@@ -36,6 +36,7 @@ class MainWindow(QMainWindow):
             "save_text": "Сохранить изменения в файле", "yes": "Да", "no": "Нет",
             "cancel": "Отмена", "status_lang": "Язык", "status_size": "Размер",
             "status_lines": "Строк", "build": "Сборка", "errors": "Ошибки",
+            "quadruples": "Тетрады",  # Добавляем
         }
 
         self.labels_en = {
@@ -54,6 +55,7 @@ class MainWindow(QMainWindow):
             "save_text": "Save changes to file", "yes": "Yes", "no": "No",
             "cancel": "Cancel", "status_lang": "Lang", "status_size": "Size",
             "status_lines": "Lines", "build": "Build", "errors": "Errors",
+            "quadruples": "Quadruples",  # Добавляем
         }
 
         self.labels = self.labels_ru
@@ -91,6 +93,12 @@ class MainWindow(QMainWindow):
 
         self._build_font_menu()
         self.central.editor.textChanged.connect(self.update_status_bar)
+        
+        # Подключаем обработчик для кнопки сборки (если он еще не подключен)
+        # Обычно кнопка сборки находится в тулбаре или меню
+        # Если у вас есть action для сборки, нужно подключить его:
+        if hasattr(self.actions, 'run'):
+            self.actions.run.triggered.connect(self.run_scanner_action)
 
     def set_language(self, lang):
         if lang == "en":
@@ -124,35 +132,70 @@ class MainWindow(QMainWindow):
         self.actions.help.setText(self.labels["help"])
         self.actions.about.setText(self.labels["about"])
 
+        # Обновляем кнопки в central_widget
         self.central.build_btn.setText(self.labels["build"])
         self.central.err_btn.setText(self.labels["errors"])
+        self.central.quad_btn.setText(self.labels["quadruples"])  # Добавляем
 
-        if self.language == "en":
-            self.central.table.setHorizontalHeaderLabels(["Code", "Type", "Lexeme", "Location"])
-        else:
-            self.central.table.setHorizontalHeaderLabels(["Код", "Тип", "Лексема", "Местоположение"])
+        # Обновляем заголовки таблицы в зависимости от текущего режима
+        if self.central.output_mode == "build":
+            if self.language == "en":
+                self.central.table.setHorizontalHeaderLabels(["Code", "Type", "Lexeme", "Location"])
+            else:
+                self.central.table.setHorizontalHeaderLabels(["Код", "Тип", "Лексема", "Местоположение"])
+        elif self.central.output_mode == "errors":
+            if self.language == "en":
+                self.central.table.setHorizontalHeaderLabels(["Invalid fragment", "Location", "Description"])
+            else:
+                self.central.table.setHorizontalHeaderLabels(["Неверный фрагмент", "Местоположение", "Описание"])
+        elif self.central.output_mode == "quadruples":
+            if self.language == "en":
+                self.central.table.setHorizontalHeaderLabels(["Operation", "Argument 1", "Argument 2", "Result"])
+            else:
+                self.central.table.setHorizontalHeaderLabels(["Операция", "Аргумент 1", "Аргумент 2", "Результат"])
 
     def run_scanner_action(self):
+        """Обновленный метод для запуска сканера с поддержкой тетрад"""
         editor = self.central.editor
-        token_rows, error_rows = run_scanner(editor)
-        self.central.set_results(token_rows, error_rows)
-        self.error_status.showMessage(f"Количество ошибок: {len(error_rows)}")
+        # run_scanner теперь возвращает 3 значения: token_rows, error_rows, quad_rows
+        token_rows, error_rows, quad_rows = run_scanner(editor)
+        
+        # Передаем все три набора данных в central_widget
+        self.central.set_results(token_rows, error_rows, quad_rows)
+        
+        # Обновляем статусную строку с информацией об ошибках и тетрадах
+        error_count = len(error_rows)
+        quad_count = len(quad_rows)
+        self.error_status.showMessage(f"Ошибок: {error_count} | Тетрад: {quad_count}")
+        
+        # Подключаем навигацию по таблице
         self._connect_table_navigation(editor)
 
     def run_antlr_action(self):
+        """Обновленный метод для ANTLR (если нужно)"""
         editor = self.central.editor
         text = editor.toPlainText()
 
         token_rows, all_errors = execute_antlr_analysis(text)
 
-        self.central.set_results(token_rows, all_errors)
+        # Для ANTLR тетрады не генерируются, передаем пустой список
+        self.central.set_results(token_rows, all_errors, [])
         self.error_status.showMessage(f"Всего ошибок ANTLR: {len(all_errors)}")
         self._connect_table_navigation(editor)
 
     def _connect_table_navigation(self, editor):
+        """Обновленный метод для навигации с поддержкой разных режимов"""
         def on_click(item):
             row = item.row()
-            rows = self.central.token_rows if self.central.output_mode == "build" else self.central.error_rows
+            
+            # Определяем, какие данные использовать в зависимости от режима
+            if self.central.output_mode == "build":
+                rows = self.central.token_rows
+            elif self.central.output_mode == "errors":
+                rows = self.central.error_rows
+            else:  # quadruples mode - навигация не нужна
+                return
+            
             if 0 <= row < len(rows):
                 navigate_to_error(editor, rows[row]["line"], rows[row]["col"])
 

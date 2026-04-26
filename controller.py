@@ -29,7 +29,7 @@ class Controller:
             editor.setPlainText(f.read())
 
         window.central.tabs[idx]["modified"] = False
-        window.central.show_results_table([])
+        window.central.show_results_table([], mode="build")
 
     def file_save(self, window):
         editor = window.get_editor()

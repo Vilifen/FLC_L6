@@ -1,8 +1,8 @@
 from .token_codes import TOKEN_CODES
-
-def build_table_rows(tokens, errors):
+def build_table_rows(tokens, errors, quads):
     token_rows = []
     error_rows = []
+    quad_rows = []
 
     for t in tokens:
         if t.type.name == "WHITESPACE":
@@ -30,5 +30,13 @@ def build_table_rows(tokens, errors):
             "line": e.line,
             "col": e.column,
         })
+    
+    for q in quads:
+        quad_rows.append({
+            "operation": q.op,
+            "arg1": q.arg1,
+            "arg2": q.arg2,
+            "result": q.result
+        })
 
-    return token_rows, error_rows
+    return token_rows, error_rows, quad_rows  # Возвращаем quad_rows
