@@ -39,4 +39,4 @@ def build_table_rows(tokens, errors, quads):
             "result": q.result
         })
 
-    return token_rows, error_rows, quad_rows  # Возвращаем quad_rows
+    return token_rows, error_rows, quad_rows  

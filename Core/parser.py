@@ -9,9 +9,9 @@ class Parser:
         self.tokens = [t for t in tokens if t.type != TokenType.WHITESPACE]
         self.pos = 0
         self.errors = scan_errors if scan_errors is not None else []
-        self.temp_counter = 1  # Счетчик временных переменных
-        self.quadruples = []   # Список тетрад (экземпляров Quadruple)
-        self.stack = []        # Стек для хранения результатов выражений
+        self.temp_counter = 1  
+        self.quadruples = []   
+        self.stack = []        
 
     def _new_temp(self):
         """Создать новую временную переменную"""
@@ -44,7 +44,6 @@ class Parser:
                     self._record_error("Неожиданный токен", ErrorCode.UNEXPECTED_TOKEN)
                 self._skip_to_next_line()
 
-            # Если есть результат в стеке, выводим его (опционально)
             if self.stack:
                 result = self.stack.pop()
                 print(f"Результат выражения: {result}")
@@ -88,27 +87,24 @@ class Parser:
         current = self._current_token()
         
         if current.type == TokenType.PLUS:
-            self.pos += 1  # пропускаем '+'
+            self.pos += 1  
             right_val = self.T()
             result = self.A(right_val)
             
-            # Создаем тетраду для сложения
             temp_var = self._new_temp()
             self._add_quadruple('+', left_val, right_val, temp_var)
             return temp_var
             
         elif current.type == TokenType.MINUS:
-            self.pos += 1  # пропускаем '-'
+            self.pos += 1  
             right_val = self.T()
             result = self.A(right_val)
             
-            # Создаем тетраду для вычитания
             temp_var = self._new_temp()
             self._add_quadruple('-', left_val, right_val, temp_var)
             return temp_var
             
         else:
-            # ε - нет оператора
             return left_val
 
     def B(self, left_val):
@@ -116,37 +112,33 @@ class Parser:
         current = self._current_token()
         
         if current.type == TokenType.MUL:
-            self.pos += 1  # пропускаем '*'
+            self.pos += 1 
             right_val = self.F()
             result = self.B(right_val)
             
-            # Создаем тетраду для умножения
             temp_var = self._new_temp()
             self._add_quadruple('*', left_val, right_val, temp_var)
             return temp_var
             
         elif current.type == TokenType.DIV:
-            self.pos += 1  # пропускаем '/'
+            self.pos += 1  
             right_val = self.F()
             result = self.B(right_val)
             
-            # Создаем тетраду для деления
             temp_var = self._new_temp()
             self._add_quadruple('/', left_val, right_val, temp_var)
             return temp_var
             
         elif current.type == TokenType.MOD:
-            self.pos += 1  # пропускаем '%'
+            self.pos += 1  
             right_val = self.F()
             result = self.B(right_val)
             
-            # Создаем тетраду для остатка от деления
             temp_var = self._new_temp()
             self._add_quadruple('%', left_val, right_val, temp_var)
             return temp_var
             
         else:
-            # ε - нет оператора
             return left_val
 
     def F(self):

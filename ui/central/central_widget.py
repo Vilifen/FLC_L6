@@ -86,7 +86,6 @@ class CentralWidget(QWidget):
         self.err_btn.setFixedHeight(32)
         self.err_btn.clicked.connect(lambda: self.switch_output("errors"))
         
-        # Новая кнопка для тетрад
         self.quad_btn = QPushButton("Тетрады")
         self.quad_btn.setCheckable(True)
         self.quad_btn.setFixedHeight(32)
@@ -94,7 +93,7 @@ class CentralWidget(QWidget):
 
         self.output_tabs_layout.addWidget(self.build_btn)
         self.output_tabs_layout.addWidget(self.err_btn)
-        self.output_tabs_layout.addWidget(self.quad_btn)  # Добавляем кнопку тетрад
+        self.output_tabs_layout.addWidget(self.quad_btn)  
 
         self.table = QTableWidget()
         self.table.setColumnCount(4)
@@ -242,7 +241,7 @@ class CentralWidget(QWidget):
         self.editor.setPlainText(data["text"])
         self.editor.blockSignals(False)
 
-    def set_results(self, token_rows, error_rows, quadruple_rows=None):  # Добавляем параметр
+    def set_results(self, token_rows, error_rows, quadruple_rows=None):  
         self.token_rows = token_rows
         self.error_rows = error_rows
         if quadruple_rows is not None:
@@ -253,7 +252,7 @@ class CentralWidget(QWidget):
         self.output_mode = mode
         self.build_btn.setChecked(mode == "build")
         self.err_btn.setChecked(mode == "errors")
-        self.quad_btn.setChecked(mode == "quadruples")  # Добавляем проверку для тетрад
+        self.quad_btn.setChecked(mode == "quadruples")
         
         if mode == "build":
             self.show_results_table(self.token_rows, mode)
