@@ -21,17 +21,22 @@ num → digit {digit}
 
 ```
 Примеры верных строк:
+```
 (2+3)*3
 3+3+4+4+4+4+4+4
 $a+4
 (2+1)*2
 3/2
+```
 
 # Лексические и синтаксические ошибки
 Диаграмма лексера
 <img width="640" height="871" alt="Комп_6Лаба_л" src="https://github.com/user-attachments/assets/f1ea7e3b-2f86-49b0-a00c-62e3e62e1b67" />
 
+
 Схема рекурсивного спуска
+![rec.png](photo/rec.png)
+
 
 Скриншоты лексера и парсера 
 <img width="1248" height="914" alt="image" src="https://github.com/user-attachments/assets/5bc87b13-c6c2-42ee-815b-a451d68e99a6" />
