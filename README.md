@@ -29,7 +29,13 @@ num → digit {digit}
 Схема рекурсивного спуска
 
 Скриншоты лексера и парсера 
+<img width="1248" height="914" alt="image" src="https://github.com/user-attachments/assets/5bc87b13-c6c2-42ee-815b-a451d68e99a6" />
+<img width="1248" height="919" alt="image" src="https://github.com/user-attachments/assets/5906c04c-d641-4b1c-9428-93eaba7dfef9" />
+
 
 # Внутренняя форма представления программы (тетрады)
+<img width="1247" height="915" alt="image" src="https://github.com/user-attachments/assets/aaaf8dce-ad61-4f15-a9d9-8e4eccdd1c98" />
+
 
 # ПОЛИЗ
+<img width="1258" height="922" alt="image" src="https://github.com/user-attachments/assets/83f71785-8c5b-432c-82aa-b6a5c77c0af0" />
