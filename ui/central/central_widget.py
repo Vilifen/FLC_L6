@@ -351,6 +351,14 @@ class CentralWidget(QWidget):
             self.table.setItem(0, 3, QTableWidgetItem("Нет тетрад для отображения"))
             return
         
+        if len(self.error_rows) > 0:
+            self.table.setRowCount(1)
+            self.table.setItem(0, 0, QTableWidgetItem(""))
+            self.table.setItem(0, 1, QTableWidgetItem(""))
+            self.table.setItem(0, 2, QTableWidgetItem(""))
+            self.table.setItem(0, 3, QTableWidgetItem("Нет тетрад для отображения"))
+            return
+        
         self.table.setRowCount(len(self.quadruple_rows))
         for i, quad in enumerate(self.quadruple_rows):
             self.table.setItem(i, 0, QTableWidgetItem(str(quad.get("operation", ""))))
