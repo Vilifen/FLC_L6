@@ -61,12 +61,14 @@ class RPNExpression:
         stack = []
         try:
             for item in rpn_list:
-                if item.isdigit() or (item.startswith('-') and item[1:].isdigit()):
-                    stack.append(int(item))
+                # Проверка на число (включая отрицательные и дробные)
+                if self._is_number(item):
+                    stack.append(float(item))
                 else:
                     if len(stack) < 2:
                         return None
                     b, a = stack.pop(), stack.pop()
+
                     if item == '+':
                         stack.append(a + b)
                     elif item == '-':
@@ -74,13 +76,27 @@ class RPNExpression:
                     elif item == '*':
                         stack.append(a * b)
                     elif item == '/':
-                        stack.append(a // b if b != 0 else 0)
+                        # Используем обычное деление / вместо целочисленного //
+                        stack.append(a / b if b != 0 else 0.0)
                     elif item == '%':
-                        stack.append(a % b if b != 0 else 0)
+                        stack.append(a % b if b != 0 else 0.0)
 
-            return stack[0] if len(stack) == 1 else None
-        except:
+            if len(stack) == 1:
+                # Округляем до 2 знаков после запятой
+                res = round(stack[0], 2)
+                # Если число целое (напр. 5.0), убираем лишнюю точку при выводе
+                return int(res) if res % 1 == 0 else res
+
             return None
+        except Exception:
+            return None
+
+    def _is_number(self, s):
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
 
     def _build_rpn(self, tokens):
         stack = []
