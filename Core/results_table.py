@@ -1,5 +1,5 @@
 from .token_codes import TOKEN_CODES
-def build_table_rows(tokens, errors, quads):
+def build_table_rows(tokens, errors, quads, rpn_rows_in=None):
     token_rows = []
     error_rows = []
     quad_rows = []
@@ -38,5 +38,7 @@ def build_table_rows(tokens, errors, quads):
             "arg2": q.arg2,
             "result": q.result
         })
+    if rpn_rows_in:
+        rpn_rows = rpn_rows_in
 
-    return token_rows, error_rows, quad_rows  
+    return token_rows, error_rows, quad_rows, rpn_rows

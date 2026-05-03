@@ -1,6 +1,6 @@
 from .scanner import Scanner
 from .parser import Parser
-
+from .rpn_generator import RPNExpression
 
 def run_scanner(editor):
     text = editor.toPlainText()
@@ -13,6 +13,7 @@ def run_scanner(editor):
     token_rows = []
     error_rows = []
     quad_rows = []
+    rpn_rows = []
 
     for t in tokens:
         token_rows.append({
@@ -60,4 +61,11 @@ def run_scanner(editor):
             "result": quad.result
         })
 
-    return token_rows, error_rows, quad_rows
+    #Полиз
+    try:
+        rpn_obj = RPNExpression(tokens)
+        rpn_rows = rpn_obj.results
+    except Exception as e:
+        rpn_rows = []
+
+    return token_rows, error_rows, quad_rows, rpn_rows

@@ -152,9 +152,9 @@ class MainWindow(QMainWindow):
     def run_scanner_action(self):
         """Обновленный метод для запуска сканера с поддержкой тетрад"""
         editor = self.central.editor
-        token_rows, error_rows, quad_rows = run_scanner(editor)
+        token_rows, error_rows, quad_rows, rpn_rows = run_scanner(editor)
         
-        self.central.set_results(token_rows, error_rows, quad_rows)
+        self.central.set_results(token_rows, error_rows, quad_rows, rpn_rows)
         
         error_count = len(error_rows)
         quad_count = len(quad_rows)

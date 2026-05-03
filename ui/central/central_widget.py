@@ -20,6 +20,7 @@ class CentralWidget(QWidget):
         self.token_rows = []
         self.error_rows = []
         self.quadruple_rows = []  # Добавляем для хранения тетрад
+        self.rpn_rows = []
 
         self.setAcceptDrops(True)
 
@@ -90,6 +91,18 @@ class CentralWidget(QWidget):
         self.quad_btn.setCheckable(True)
         self.quad_btn.setFixedHeight(32)
         self.quad_btn.clicked.connect(lambda: self.switch_output("quadruples"))
+
+
+        self.rpn_btn = QPushButton("ПОЛИЗ")  # Создаем кнопку
+        self.rpn_btn.setCheckable(True)
+        self.rpn_btn.setFixedHeight(32)
+        self.rpn_btn.clicked.connect(lambda: self.switch_output("rpn"))  # Привязываем режим "rpn"
+
+        self.output_tabs_layout.addWidget(self.build_btn)
+        self.output_tabs_layout.addWidget(self.err_btn)
+        self.output_tabs_layout.addWidget(self.quad_btn)
+        self.output_tabs_layout.addWidget(self.rpn_btn)
+
 
         self.output_tabs_layout.addWidget(self.build_btn)
         self.output_tabs_layout.addWidget(self.err_btn)
@@ -241,11 +254,15 @@ class CentralWidget(QWidget):
         self.editor.setPlainText(data["text"])
         self.editor.blockSignals(False)
 
-    def set_results(self, token_rows, error_rows, quadruple_rows=None):  
+    def set_results(self, token_rows, error_rows, quadruple_rows=None, rpn_rows=None):
         self.token_rows = token_rows
         self.error_rows = error_rows
         if quadruple_rows is not None:
             self.quadruple_rows = quadruple_rows
+        if rpn_rows is not None:
+            self.rpn_rows = rpn_rows
+        else:
+            self.rpn_rows = []
         self.switch_output(self.output_mode)
 
     def switch_output(self, mode):
@@ -253,14 +270,36 @@ class CentralWidget(QWidget):
         self.build_btn.setChecked(mode == "build")
         self.err_btn.setChecked(mode == "errors")
         self.quad_btn.setChecked(mode == "quadruples")
-        
+        self.rpn_btn.setChecked(mode == "rpn")
+
         if mode == "build":
             self.show_results_table(self.token_rows, mode)
         elif mode == "errors":
             self.show_results_table(self.error_rows, mode)
         elif mode == "quadruples":
             self.show_quadruples_table()
+        elif mode == "rpn":
+            self.show_rpn_table()
 
+    def show_rpn_table(self):
+        """Отображение таблицы ПОЛИЗ"""
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(["Выражение (ПОЛИЗ)", "Результат"])
+
+        if not self.rpn_rows:
+            self.table.setRowCount(1)
+            self.table.setItem(0, 0, QTableWidgetItem("Нет данных"))
+            self.table.setItem(0, 1, QTableWidgetItem("—"))
+            return
+
+        self.table.setRowCount(len(self.rpn_rows))
+        for i, row in enumerate(self.rpn_rows):
+            # Используем ключи 'expression' и 'result', которые мы прописали в run_scanner
+            expr = str(row.get("expression", ""))
+            res = str(row.get("result", ""))
+
+            self.table.setItem(i, 0, QTableWidgetItem(expr))
+            self.table.setItem(i, 1, QTableWidgetItem(res))
     def show_results_table(self, rows, mode):
         if mode == "errors":
             self.table.setColumnCount(3)
