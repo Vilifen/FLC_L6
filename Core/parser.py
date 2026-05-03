@@ -11,7 +11,9 @@ class Parser:
         self.errors = scan_errors if scan_errors is not None else []
         self.temp_counter = 1  
         self.quadruples = []   
-        self.stack = []        
+        self.stack = []
+        self.current_line_has_error = False  
+        self.quadruples_before_line = []     
 
     def _new_temp(self):
         """Создать новую временную переменную"""
@@ -20,12 +22,28 @@ class Parser:
         return temp_name
 
     def _add_quadruple(self, op, arg1, arg2, result):
-        """Добавить тетраду как экземпляр класса Quadruple"""
-        quadruple = Quadruple(op, arg1, arg2, result)
-        self.quadruples.append(quadruple)
+        """Добавить тетраду (только если нет ошибки в текущей строке)"""
+        if not self.current_line_has_error:
+            quadruple = Quadruple(op, arg1, arg2, result)
+            self.quadruples.append(quadruple)
+            self.quadruples_before_line.append(quadruple)
+
+    def _clear_line_quadruples(self):
+        """Очистить тетрады, сгенерированные для текущей строки"""
+        count_to_remove = len(self.quadruples_before_line)
+        for _ in range(count_to_remove):
+            if self.quadruples:
+                self.quadruples.pop()
+        self.quadruples_before_line.clear()
 
     def parse(self):
         while self.pos < len(self.tokens) and self._current_token().type != TokenType.EOF:
+            self.current_line_has_error = False
+            self.quadruples_before_line.clear()
+            
+            line_start_pos = self.pos
+            start_line_num = self._current_token().line
+            
             current = self._current_token()
 
             if current.type == TokenType.NEWLINE:
@@ -35,18 +53,46 @@ class Parser:
             if current.type == TokenType.ERROR:
                 self.pos += 1
                 self._skip_to_next_line()
+                self.current_line_has_error = True
+                self._clear_line_quadruples()
                 continue
 
-            self.E()
+            quad_count_before = len(self.quadruples)
+            
+            try:
+                self.E()
+                
+                if self.pos < len(self.tokens):
+                    next_token = self._current_token()
+                    if next_token.type not in (TokenType.NEWLINE, TokenType.EOF):
+                        if next_token.type != TokenType.ERROR:
+                            self._record_error("Неожиданный токен", ErrorCode.UNEXPECTED_TOKEN)
+                            self.current_line_has_error = True
+                
 
-            if self.pos < len(self.tokens) and self._current_token().type not in (TokenType.NEWLINE, TokenType.EOF):
-                if self._current_token().type != TokenType.ERROR:
-                    self._record_error("Неожиданный токен", ErrorCode.UNEXPECTED_TOKEN)
+                if self.current_line_has_error:
+                    self.quadruples = self.quadruples[:quad_count_before]
+                    self.quadruples_before_line.clear()
+                    self._skip_to_next_line()
+                
+            except Exception as e:
+                self.quadruples = self.quadruples[:quad_count_before]
+                self.quadruples_before_line.clear()
+                self.current_line_has_error = True
                 self._skip_to_next_line()
 
-            if self.stack:
+            if self.stack and not self.current_line_has_error:
                 result = self.stack.pop()
                 print(f"Результат выражения: {result}")
+            elif self.stack:
+                self.stack.clear()  
+
+            while self.pos < len(self.tokens) and self._current_token().type != TokenType.NEWLINE and self._current_token().type != TokenType.EOF:
+                self.pos += 1
+            if self.pos < len(self.tokens) and self._current_token().type == TokenType.NEWLINE:
+                self.pos += 1
+
+            self.current_line_has_error = False
 
         return self.errors, self.quadruples
 
@@ -68,84 +114,97 @@ class Parser:
     def _record_error(self, message, code):
         token = self._current_token()
         self.errors.append(ScanError(code, message, token.line, token.column, token.value))
+        self.current_line_has_error = True
 
     def E(self):
-        """E → T A"""
         left_val = self.T()
         result_val = self.A(left_val)
-        self.stack.append(result_val)
+        if not self.current_line_has_error:
+            self.stack.append(result_val)
         return result_val
 
     def T(self):
-        """T → F B"""
         left_val = self.F()
         result_val = self.B(left_val)
         return result_val
 
     def A(self, left_val):
-        """A → ε | + T A | - T A (левоассоциативная обработка)"""
+        if self.current_line_has_error:
+            return left_val
+            
         current = self._current_token()
         
         if current.type == TokenType.PLUS:
             self.pos += 1
             right_val = self.T()
             
-            # Создаем временную переменную для текущей операции
-            temp_var = self._new_temp()
-            self._add_quadruple('+', left_val, right_val, temp_var)
-            
-            # Продолжаем обрабатывать остальные операции справа,
-            # но теперь левым аргументом будет результат текущей операции
-            return self.A(temp_var)
+            if not self.current_line_has_error:
+                temp_var = self._new_temp()
+                self._add_quadruple('+', left_val, right_val, temp_var)
+                return self.A(temp_var)
+            else:
+                return left_val
             
         elif current.type == TokenType.MINUS:
             self.pos += 1
             right_val = self.T()
             
-            temp_var = self._new_temp()
-            self._add_quadruple('-', left_val, right_val, temp_var)
-            
-            return self.A(temp_var)
-            
+            if not self.current_line_has_error:
+                temp_var = self._new_temp()
+                self._add_quadruple('-', left_val, right_val, temp_var)
+                return self.A(temp_var)
+            else:
+                return left_val
         else:
             return left_val
 
     def B(self, left_val):
-        """B → ε | * F B | / F B | % F B (левоассоциативная обработка)"""
+        if self.current_line_has_error:
+            return left_val
+            
         current = self._current_token()
         
         if current.type == TokenType.MUL:
             self.pos += 1
             right_val = self.F()
             
-            temp_var = self._new_temp()
-            self._add_quadruple('*', left_val, right_val, temp_var)
-            
-            return self.B(temp_var)
+            if not self.current_line_has_error:
+                temp_var = self._new_temp()
+                self._add_quadruple('*', left_val, right_val, temp_var)
+                return self.B(temp_var)
+            else:
+                return left_val
             
         elif current.type == TokenType.DIV:
             self.pos += 1
             right_val = self.F()
             
-            temp_var = self._new_temp()
-            self._add_quadruple('/', left_val, right_val, temp_var)
-            
-            return self.B(temp_var)
+            if not self.current_line_has_error:
+                temp_var = self._new_temp()
+                self._add_quadruple('/', left_val, right_val, temp_var)
+                return self.B(temp_var)
+            else:
+                return left_val
             
         elif current.type == TokenType.MOD:
             self.pos += 1
             right_val = self.F()
             
-            temp_var = self._new_temp()
-            self._add_quadruple('%', left_val, right_val, temp_var)
-            
-            return self.B(temp_var)
-            
+            if not self.current_line_has_error:
+                temp_var = self._new_temp()
+                self._add_quadruple('%', left_val, right_val, temp_var)
+                return self.B(temp_var)
+            else:
+                return left_val
         else:
             return left_val
 
     def F(self):
-        """F → num | $id | (E)"""
+        if self.current_line_has_error:
+            if self.pos < len(self.tokens):
+                self.pos += 1
+            return None
+            
         current = self._current_token()
         
         if current.type == TokenType.NUM:
@@ -161,12 +220,14 @@ class Parser:
         elif current.type == TokenType.LPAREN:
             self._match(TokenType.LPAREN)
             expr_val = self.E()
-            if self._current_token().type != TokenType.ERROR:
-                if not self._match(TokenType.RPAREN):
-                    self._record_error("Отсутствует закрывающая скобка", ErrorCode.MISSING_RPAREN)
+            if not self.current_line_has_error:
+                if self._current_token().type != TokenType.ERROR:
+                    if not self._match(TokenType.RPAREN):
+                        self._record_error("Отсутствует закрывающая скобка", ErrorCode.MISSING_RPAREN)
             return expr_val
             
         elif current.type == TokenType.ERROR:
+            self.current_line_has_error = True
             return None
             
         elif current.type in (TokenType.RPAREN, TokenType.EOF, TokenType.NEWLINE):
@@ -179,7 +240,6 @@ class Parser:
             return None
 
     def print_quadruples(self):
-        """Вывести все тетрады для отладки"""
         if not self.quadruples:
             print("\nНет сгенерированных тетрад")
             return
@@ -191,5 +251,4 @@ class Parser:
             print(f"{i}\t{quad.op}\t\t{quad.arg1}\t{quad.arg2}\t{quad.result}")
     
     def get_quadruples_list(self):
-        """Вернуть список тетрад"""
         return self.quadruples
