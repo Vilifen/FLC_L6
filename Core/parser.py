@@ -83,60 +83,63 @@ class Parser:
         return result_val
 
     def A(self, left_val):
-        """A → ε | + T A | - T A"""
+        """A → ε | + T A | - T A (левоассоциативная обработка)"""
         current = self._current_token()
         
         if current.type == TokenType.PLUS:
-            self.pos += 1  
+            self.pos += 1
             right_val = self.T()
-            result = self.A(right_val)
             
+            # Создаем временную переменную для текущей операции
             temp_var = self._new_temp()
             self._add_quadruple('+', left_val, right_val, temp_var)
-            return temp_var
+            
+            # Продолжаем обрабатывать остальные операции справа,
+            # но теперь левым аргументом будет результат текущей операции
+            return self.A(temp_var)
             
         elif current.type == TokenType.MINUS:
-            self.pos += 1  
+            self.pos += 1
             right_val = self.T()
-            result = self.A(right_val)
             
             temp_var = self._new_temp()
             self._add_quadruple('-', left_val, right_val, temp_var)
-            return temp_var
+            
+            return self.A(temp_var)
             
         else:
             return left_val
 
     def B(self, left_val):
-        """B → ε | * F B | / F B | % F B"""
+        """B → ε | * F B | / F B | % F B (левоассоциативная обработка)"""
         current = self._current_token()
         
         if current.type == TokenType.MUL:
-            self.pos += 1 
+            self.pos += 1
             right_val = self.F()
-            result = self.B(right_val)
             
             temp_var = self._new_temp()
             self._add_quadruple('*', left_val, right_val, temp_var)
-            return temp_var
+            
+            return self.B(temp_var)
             
         elif current.type == TokenType.DIV:
-            self.pos += 1  
+            self.pos += 1
             right_val = self.F()
-            result = self.B(right_val)
             
             temp_var = self._new_temp()
             self._add_quadruple('/', left_val, right_val, temp_var)
-            return temp_var
+            
+            return self.B(temp_var)
             
         elif current.type == TokenType.MOD:
-            self.pos += 1  
+            self.pos += 1
             right_val = self.F()
-            result = self.B(right_val)
             
             temp_var = self._new_temp()
             self._add_quadruple('%', left_val, right_val, temp_var)
-            return temp_var
+            
+            return self.B(temp_var)
             
         else:
             return left_val
